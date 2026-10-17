@@ -26,13 +26,13 @@
 
 ## 最近验证
 
-上一版完整 CI（音频增量）：[39074432125](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39074432125)，Web、Android、iOS、macOS、Windows 五项任务全部成功。其中核心/师父服务 15 项，浏览器 42 项通过、2 项有意跳过，生产离线 2 项通过。iOS 包含原生 XCTest，Windows 包含 NSIS 安装后的实际原生运行，不是独立浏览器替代。
+最近已确认全绿的功能提交 49bdc5c：[39078990197](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39078990197)，Web、Android、iOS、macOS、Windows 五项任务全部成功。其中规则/服务/平台单元测试 20 项，浏览器 46 项通过、2 项有意跳过，生产离线 4 项通过。iOS 包含原生 XCTest，Windows 包含 NSIS 安装后的实际原生运行，不是独立浏览器替代。
 
-该版本机原生回归：Android 1 项、iOS 1 项通过。报告与日志：
+该版本机原生回归：Android 原仪器及独立进程恢复流程、iOS XCTest 2 项通过。报告与日志：
 
-- `artifacts/android-final.log`
-- `artifacts/ios-final.log`、`artifacts/ios-native-1792273536679.xcresult`
-- `artifacts/windows-final-run/artifacts/windows-native/`（下载的 CI 原生截图与结果 JSON）
+- `artifacts/android-lifecycle-final.log`、`artifacts/android-process-death/result.json`
+- `artifacts/ios-lifecycle-final.log`、`artifacts/ios-native-1792279145447.xcresult`
+- `artifacts/windows-49bdc5c-run/artifacts/windows-native/`（下载的 CI 原生截图与结果 JSON）
 - `artifacts/show-me-platforms.html`（实际 iOS 模拟器与 Windows CI 截图，明确标注环境）
 
 ### 已完成：音频生命周期
@@ -68,6 +68,15 @@ macOS App / DMG 已重建。生产离线回归 4 项通过，包含断网进入�
 - a1523d8 的 CI 发现快速静音后，迟到的恢复仍可能使音频上下文回到运行状态。新增延迟原生 `resume` 的回归先在旧代码稳定失败，再补齐 `statechange` 下的静音约束；当前 8 项音频测试通过，包含等待迟到请求真正完成后仍为暂停状态。保留关闭音效、后台暂停、显式恢复及销毁的检查。修复前后日志为 `artifacts/audio-late-resume-before.log`、`artifacts/audio-late-resume-after.log`。
 
 本轮本机：规则/服务/平台单元测试 20 项、完整浏览器 46 项通过（2 项按项目有意跳过）、离线 4 项通过；Android 仪器与主机进程恢复流程、iOS XCTest 2 项通过。最新 iPhone 未签名 arm64 App 和 macOS App / DMG 已重建。日志为 `artifacts/mobile-lifecycle-e2e.log`、`artifacts/ios-lifecycle-final.log`、`artifacts/ios-device-lifecycle-final.log`、`artifacts/macos-lifecycle-final.log`、`artifacts/offline-lifecycle-final.log`。iOS 报告为 `artifacts/ios-native-1792279145447.xcresult`。这次音频修正的最终云端回归以 PR 当前提交的检查为准，未把 a1523d8 的失败运行计为整轮通过。
+
+
+### 本轮：完整浏览器与 Windows 冷启动验收
+
+Chromium 和 WebKit 新增关闭独立浏览器、从同一磁盘配置目录重新打开的用例：核对进行中手牌、灵石、课程及试炼印记。两种引擎各 1 项通过，另两种重复尺寸按项目主动跳过；日志为 `artifacts/browser-relaunch-final.log`。此前完整浏览器 46 项通过的证据继续保留，新整轮结果以当前提交的 CI 为准。
+
+Windows 新增在下一手进行中暂停、记录手牌和灵石、按自身 PID 强制终止 App 及子进程、确认旧调试端点消失、重新启动并核对存档与印记。仅作用于测试配置目录及本测试启动的进程，依据 [taskkill 官方参数](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill)。本机已做脚本语法检查；Windows 实跑仍待新一轮 CI，未将语法检查计为运行通过。
+
+49bdc5c 的五平台候选产物已收齐于 `artifacts/packages/candidate-49bdc5c/`，包括 Web ZIP、Android 调试 APK、iOS 模拟器与未签名设备 App ZIP、macOS arm64 DMG、Windows x64 NSIS。`manifest.json` 记录来源提交和验收边界，`SHA256SUMS.txt` 校验值已逐文件复核。Windows 包来自同提交成功的 CI；iOS 设备包仍需开发者签名，不能直接安装。该候选包的 Windows 证据覆盖重载恢复，新增整进程冷启动验证仍待执行。
 
 ## 可重复执行
 
