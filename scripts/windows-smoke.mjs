@@ -30,6 +30,7 @@ bridge.on("error", (error) => {
   startupError = error;
 });
 let session;
+let appProcess;
 async function command(
   path,
   body,
@@ -96,12 +97,45 @@ try {
     await command("/status");
     return true;
   }, "Tauri driver starts");
+  // WebView2 133+ has a known WebDriver launch-mode regression. Attach to the
+  // installed app's own loopback DevTools endpoint instead of downgrading its runtime.
+  appProcess = spawn(application, [], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      TAURI_WEBVIEW_AUTOMATION: "true",
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9222",
+      WEBVIEW2_USER_DATA_FOLDER: resolve("artifacts/.windows-test-profile"),
+    },
+  });
+  appProcess.on("error", (error) => {
+    startupError = error;
+  });
+  appProcess.on("exit", (code) => {
+    logs += `\nApplication exit: ${code}\n`;
+  });
+  appProcess.stdout.on("data", (data) => {
+    logs += data;
+  });
+  appProcess.stderr.on("data", (data) => {
+    logs += data;
+  });
+  await until(
+    async () => {
+      const response = await fetch("http://127.0.0.1:9222/json/version", {
+        signal: AbortSignal.timeout(2000),
+      });
+      return response.ok && !!(await response.json()).webSocketDebuggerUrl;
+    },
+    "installed app exposes its test-only DevTools endpoint",
+    60_000,
+  );
   const created = await command("/session", {
     capabilities: {
       alwaysMatch: {
         browserName: "webview2",
         "ms:edgeChromium": true,
-        "ms:edgeOptions": { binary: application, args: [] },
+        "ms:edgeOptions": { debuggerAddress: "127.0.0.1:9222" },
       },
     },
   });
@@ -242,5 +276,6 @@ try {
     } catch {}
   }
   bridge.kill();
+  appProcess?.kill();
   writeFileSync(join(output, "driver.log"), logs);
 }
