@@ -27,7 +27,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="layout play-layout"><aside class="intro"><div class="seal large">问道</div><p class="eyebrow">THE PATH WITHIN</p><h1>方寸之间<br/>自有乾坤</h1><div class="gold-line"></div><p class="intro-copy">从一手牌，走向一场修行。<br/>静心，观势，悟道。</p><div class="edition"><span>壹</span><div>云隐修炼<small>单人练习 · 移动端优先</small></div></div></aside>
   <main class="game-shell play-shell" aria-label="云隐宗练习桌">
     <header class="topbar"><a class="brand" href="/" aria-label="问道牌途"><span class="seal">道</span><span>问道牌途<small>WENDAO POKER</small></span></a><div class="header-actions"><button id="pause" class="pause-button" disabled>暂停</button><button id="sound" class="icon-button" aria-label="开启音效" aria-pressed="false">${icons.sound}<span class="mute-line"></span></button><button id="settings" class="icon-button" aria-label="体验设置">${icons.settings}</button></div></header>
-    <section class="chapter"><div><span class="chapter-mark">壹</span><span>云隐山<small>盲注 10 / 20</small></span></div><button id="study" class="study-link">修炼 <span id="progress">0/3</span> ›</button></section>
+    <section class="chapter"><div><span class="chapter-mark">壹</span><span>云隐山<small>盲注 10 / 20</small></span></div><button id="study" class="study-link">修炼 <span id="progress">0/${lessons.length}</span> ›</button></section>
     <div class="live-status"><span id="stage-label">静心 · 入席</span><span id="hand-number">单人练习</span></div>
     <section class="live-table-wrap"><div id="live-table" role="img" aria-label="六人牌桌，尚未发牌"></div><div id="loading" role="status">正在铺开牌席…</div><button id="inspect" class="look-button" disabled aria-label="抬起或放下手牌">观牌</button></section>
     <section class="play-dock" aria-label="牌局操作">
@@ -43,9 +43,9 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <aside class="side-note"><span class="vertical-title">落子有声 · 行牌有意</span><div class="note-bottom"><span class="tiny-diamond">◇</span><p>输赢是一时，进退亦是修行。<br/>从看懂一手牌开始。</p><button id="study-desktop">进入修炼阁 →</button></div></aside></div>
   <dialog id="raise-dialog" class="bottom-sheet" aria-labelledby="raise-title"><form id="raise-form"><div class="dialog-header"><div><p class="eyebrow">CHOOSE YOUR WAGER</p><h2 id="raise-title">落子 · 加注</h2></div><button type="button" class="close-button" aria-label="关闭加注">×</button></div><label class="amount-field" for="raise-amount"><span>本轮总投入</span><div><input id="raise-amount" type="number" inputmode="numeric" step="1" required aria-describedby="raise-detail raise-error"/><span>灵石</span></div></label><input id="raise-range" type="range" step="1" aria-label="调整本轮总投入"/><div class="bet-presets"><button type="button" data-bet="min">最小</button><button type="button" data-bet="half">半池</button><button type="button" data-bet="pot">一池</button><button type="button" data-bet="all">全下</button></div><p id="raise-detail" class="raise-detail"></p><p id="raise-error" class="input-error" role="alert"></p><button id="raise-confirm" class="primary-button sheet-confirm" type="submit">确认加注</button></form></dialog>
   <dialog id="review-dialog" class="bottom-sheet" aria-labelledby="review-title"><div class="dialog-header"><div><p class="eyebrow">LEARN FROM EVERY HAND</p><h2 id="review-title">明心 · 本手复盘</h2></div><button class="close-button" aria-label="关闭复盘">×</button></div><div id="review-body"></div></dialog>
-  <dialog id="study-dialog" class="bottom-sheet" aria-labelledby="study-title"><div class="dialog-header"><div><p class="eyebrow">SMALL STEPS, DEEPER WISDOM</p><h2 id="study-title">悟道阁 · 入门修炼</h2></div><button class="close-button" aria-label="关闭修炼">×</button></div><div id="study-body"></div></dialog>
+  <dialog id="study-dialog" class="bottom-sheet" aria-labelledby="study-title"><div class="dialog-header"><div><p class="eyebrow">SMALL STEPS, DEEPER WISDOM</p><h2 id="study-title">悟道阁 · 修炼</h2></div><button class="close-button" aria-label="关闭修炼">×</button></div><div id="study-body"></div></dialog>
   <dialog id="settings-dialog" aria-labelledby="settings-title"><div class="dialog-header"><div><p class="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">调息 · 体验设置</h2></div><button class="close-button" aria-label="关闭设置">×</button></div><label class="setting-row"><span>音效<small>轻柔的翻牌与灵石提示音</small></span><input id="sound-toggle" type="checkbox" role="switch"/></label><label class="setting-row"><span>减少动态效果<small>缩短位移与翻转，关闭装饰粒子</small></span><input id="motion-toggle" type="checkbox" role="switch"/></label><label class="setting-row"><span>灵气效果<small>均衡模式减少装饰粒子</small></span><select id="quality"><option value="fine">细腻</option><option value="balanced">均衡</option></select></label><div class="metrics"><span>当前浏览器帧间隔采样</span><strong id="fps">等待有效样本</strong><small>循环采样不等于 GPU 或手机真机性能测试。</small></div><p id="settings-feedback" class="dialog-footnote">偏好保存在本设备。</p><a class="demo-link" href="/?mode=demo">查看固定动效演示 →</a></dialog>
-  <dialog id="about-dialog" aria-labelledby="about-title"><div class="dialog-header"><div><p class="eyebrow">BEGIN YOUR PRACTICE</p><h2 id="about-title">云隐宗 · 练习桌</h2></div><button class="close-button" aria-label="关闭说明">×</button></div><p class="about-copy">标准六人无限注德州扑克。每人两张底牌，与五张公共牌组合出最佳五张牌。跟注、加注或弃牌，按顺序行动。你可以通过最好的牌获胜，也可以在其他人都弃牌时获胜。</p><div class="about-callout">这是单人虚拟灵石练习。五名电脑对手采用本地策略，不读取你的底牌；师父提供规则指引，尚未接入大语言模型。</div><p class="about-copy">牌局自动保存在本设备。刷新或切后台后会暂停，点击继续即可恢复。每手结束后可复盘；灵石耗尽的座位会在下一手免费补给 1,000。</p><a class="demo-link" href="/?mode=demo">体验固定动效样板 →</a></dialog>
+  <dialog id="about-dialog" aria-labelledby="about-title"><div class="dialog-header"><div><p class="eyebrow">BEGIN YOUR PRACTICE</p><h2 id="about-title">云隐宗 · 练习桌</h2></div><button class="close-button" aria-label="关闭说明">×</button></div><p class="about-copy">标准六人无限注德州扑克。每人两张底牌，与五张公共牌组合出最佳五张牌。跟注、加注或弃牌，按顺序行动。你可以通过最好的牌获胜，也可以在其他人都弃牌时获胜。</p><div class="about-callout">这是单人虚拟灵石练习。五名电脑对手采用本地策略，不读取你的底牌；师父提供规则指引，尚未接入大语言模型。</div><p class="about-copy">牌局自动保存在本设备。刷新或切后台后会暂停，点击继续即可恢复。每手结束后可复盘；灵石耗尽的座位会在下一手免费补给 1,000。</p><p class="about-copy web-install-note">Web 正式版可添加到主屏幕。首次联网加载完成后，牌局与课程可离线使用；浏览器清理网站数据会移除本地进度。新版本将在旧页面全部关闭后启用。</p><a class="demo-link" href="/?mode=demo">体验固定动效样板 →</a></dialog>
 `;
 
 const get = <T extends HTMLElement>(id: string) =>
@@ -160,7 +160,7 @@ function updateUI() {
             : "轮到你行动"
           : `${view.players[view.actor!].name} · 行动中`;
   get("save-status").textContent = savedOK
-    ? notice || "本地保存 · 单人练习"
+    ? notice || (navigator.onLine ? "本地保存 · 单人练习" : "本地保存 · 离线练习")
     : saved.corrupt && !hand
       ? "旧记录无法读取，请重新入席"
       : "当前浏览器无法保存，请保持页面开启";
@@ -586,3 +586,6 @@ window.addEventListener('wendao:suspend',()=>{
 });
 window.addEventListener('wendao:storage-error',()=>{savedOK=false;updateUI();});
 if (import.meta.hot) import.meta.hot.dispose(() => game.destroy(true));
+
+window.addEventListener("online", updateUI);
+window.addEventListener("offline", updateUI);

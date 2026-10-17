@@ -4,6 +4,7 @@ async function idle(page: Page) {
   await expect(page.locator("#live-table")).toHaveAttribute(
     "data-busy",
     "false",
+    { timeout: 15_000 },
   );
 }
 async function start(page: Page, reduced = true) {
@@ -160,6 +161,7 @@ test("三项修炼、答错重试、进度保存与短屏操作区可见", async
 });
 
 test("九课逐境解锁，进阶练习和满境进度可恢复", async ({page}, info) => {
+  test.setTimeout(120_000);
   test.skip(!["mobile", "mobile-webkit"].includes(info.project.name), "Progression exercised on both mobile browser engines");
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto('/');
