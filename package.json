@@ -10,10 +10,13 @@
     "test:e2e": "playwright test",
     "test:offline": "npm run build && playwright test --config playwright.offline.config.ts",
     "test:unit": "tsx --test tests/unit/*.test.ts",
+    "coach:serve": "node --env-file-if-exists=.env --import tsx server/index.ts",
+    "check:server": "tsc --noEmit -p tsconfig.server.json",
     "native:sync": "node scripts/platform.mjs sync",
     "build:android": "node scripts/platform.mjs android",
     "build:ios": "node scripts/platform.mjs ios-sim",
     "build:ios-device": "node scripts/platform.mjs ios-device",
+    "build:ios-signed": "node scripts/platform.mjs ios-signed",
     "build:desktop": "node scripts/platform.mjs desktop",
     "brand": "node scripts/brand.mjs",
     "test:android": "node scripts/platform.mjs android-test"
@@ -33,5 +36,10 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.4"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "11.1.1"
+    }
   }
 }

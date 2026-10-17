@@ -79,6 +79,8 @@ public class PracticeInstrumentedTest {
             until("document.querySelector('#raise-dialog').open");
             assertEquals("true", js("document.querySelector('#raise-confirm').getBoundingClientRect().bottom <= innerHeight"));
             js("document.querySelector('#raise-dialog').close()");
+            // The remainder of the hand also exercises the full animation path in the native WebView.
+            js("document.querySelector('#settings').click();document.querySelector('#motion-toggle').click();document.querySelector('#settings-dialog').close()");
             int actions = 0;
             while (!"\"complete\"".equals(js("document.querySelector('#live-table').dataset.street"))) {
                 assertTrue("Practice hand must terminate", ++actions < 40);
@@ -88,6 +90,11 @@ public class PracticeInstrumentedTest {
             js("document.querySelector('#review').click()");
             until("document.querySelector('#review-dialog').open");
             assertEquals("true", js("document.querySelectorAll('.action-history li').length > 0"));
+            js("document.querySelector('#review-dialog').close();document.querySelector('#coach-open').click()");
+            until("document.querySelector('#coach-dialog').open");
+            assertEquals("true", js("document.querySelectorAll('#coach-facts dd').length === 4"));
+            js("document.querySelector('[data-coach-topic=price]').click()");
+            until("document.querySelector('#coach-source').textContent.includes('本地指引')");
         } finally {
             instrumentation.runOnMainSync(() -> activity.finish());
         }

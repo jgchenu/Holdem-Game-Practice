@@ -158,19 +158,38 @@ export class LiveScene extends Phaser.Scene {
       if (object instanceof Phaser.GameObjects.Text) object.setResolution(2);
     });
     this.applyPreferences();
-    this.game.events.on(Phaser.Core.Events.HIDDEN, this.resetFrameSamples, this);
-    this.game.events.on(Phaser.Core.Events.VISIBLE, this.resetFrameSamples, this);
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-      { this.scale.off(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
-        this.game.events.off(Phaser.Core.Events.HIDDEN, this.resetFrameSamples, this);
-        this.game.events.off(Phaser.Core.Events.VISIBLE, this.resetFrameSamples, this); },
+    this.game.events.on(
+      Phaser.Core.Events.HIDDEN,
+      this.resetFrameSamples,
+      this,
     );
+    this.game.events.on(
+      Phaser.Core.Events.VISIBLE,
+      this.resetFrameSamples,
+      this,
+    );
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
+      this.game.events.off(
+        Phaser.Core.Events.HIDDEN,
+        this.resetFrameSamples,
+        this,
+      );
+      this.game.events.off(
+        Phaser.Core.Events.VISIBLE,
+        this.resetFrameSamples,
+        this,
+      );
+    });
     this.refreshTypography();
     this.hooks.ready();
   }
 
-  private resetFrameSamples() { this.lastTime = 0; this.samples = []; }
+  private resetFrameSamples() {
+    this.lastTime = 0;
+    this.samples = [];
+  }
 
   private refreshTypography() {
     // Keep labels legible when a short phone gives the canvas less vertical space.

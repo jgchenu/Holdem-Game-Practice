@@ -1,21 +1,28 @@
-import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dist = fileURLToPath(new URL('../dist/', import.meta.url));
-function files(directory, prefix = '') {
-  return readdirSync(directory, { withFileTypes: true }).flatMap(entry =>
-    entry.isDirectory() ? files(join(directory, entry.name), `${prefix}${entry.name}/`)
-      : [`${prefix}${entry.name}`]);
+const dist = fileURLToPath(new URL("../dist/", import.meta.url));
+function files(directory, prefix = "") {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory()
+      ? files(join(directory, entry.name), `${prefix}${entry.name}/`)
+      : [`${prefix}${entry.name}`],
+  );
 }
-const assets = files(dist).filter(name => name !== 'sw.js').sort();
-const hash = createHash('sha256');
-for (const name of assets) hash.update(name).update(readFileSync(join(dist, name)));
-const version = hash.digest('hex').slice(0, 16);
-writeFileSync(join(dist, 'sw.js'), `// Generated from the complete production bundle. Do not edit.
+const assets = files(dist)
+  .filter((name) => name !== "sw.js")
+  .sort();
+const hash = createHash("sha256");
+for (const name of assets)
+  hash.update(name).update(readFileSync(join(dist, name)));
+const version = hash.digest("hex").slice(0, 16);
+writeFileSync(
+  join(dist, "sw.js"),
+  `// Generated from the complete production bundle. Do not edit.
 const CACHE = 'wendao-shell-${version}';
-const ASSETS = ${JSON.stringify(assets.map(name => '/' + name))};
+const ASSETS = ${JSON.stringify(assets.map((name) => "/" + name))};
 const URLS = new Set(ASSETS);
 self.addEventListener('install', event => {
   // An incomplete download must never replace the current offline version.
@@ -39,5 +46,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(path)) || fetch(request)));
 });
 // Updates deliberately wait for all old tabs to close: never reload a live hand.
-`);
+`,
+);
 console.log(`Offline shell ${version}: ${assets.length} local assets`);

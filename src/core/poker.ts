@@ -417,6 +417,7 @@ export interface Observation {
   players: (Omit<Player, "hole"> & { hole: Card[] | null })[];
   legal: LegalActions | null;
   result: Result | null;
+  log: LogEntry[];
 }
 /** Single visibility boundary for both bots and the renderer. No deck, burns or other private cards. */
 export function observe(state: HandState, viewer: number): Observation {
@@ -438,6 +439,7 @@ export function observe(state: HandState, viewer: number): Observation {
     })),
     legal: legalActions(state, viewer),
     result: state.result ? structuredClone(state.result) : null,
+    log: state.log.map(entry => ({...entry})),
   };
 }
 

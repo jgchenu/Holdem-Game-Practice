@@ -160,30 +160,93 @@ test("三项修炼、答错重试、进度保存与短屏操作区可见", async
   ).toBeTruthy();
 });
 
-test("九课逐境解锁，进阶练习和满境进度可恢复", async ({page}, info) => {
+test("九课逐境解锁，进阶练习和满境进度可恢复", async ({ page }, info) => {
   test.setTimeout(120_000);
-  test.skip(!["mobile", "mobile-webkit"].includes(info.project.name), "Progression exercised on both mobile browser engines");
-  await page.emulateMedia({reducedMotion:"reduce"});
-  await page.goto('/');
-  await expect(page.locator('#start')).toBeEnabled();
-  await page.locator('#study').click();
-  const answers = [[1,2],[0,1],[2,1],[0,1],[1,1],[1,1],[1,1],[0,1],[1,1]];
-  for(let index=0;index<answers.length;index++) {
+  test.skip(
+    !["mobile", "mobile-webkit"].includes(info.project.name),
+    "Progression exercised on both mobile browser engines",
+  );
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.locator("#start")).toBeEnabled();
+  await page.locator("#study").click();
+  const answers = [
+    [1, 2],
+    [0, 1],
+    [2, 1],
+    [0, 1],
+    [1, 1],
+    [1, 1],
+    [1, 1],
+    [0, 1],
+    [1, 1],
+  ];
+  for (let index = 0; index < answers.length; index++) {
     await expect(page.locator(`[data-lesson="${index}"]`)).toBeEnabled();
     await page.locator(`[data-lesson="${index}"]`).click();
-    for(const answer of answers[index]) {
+    for (const answer of answers[index]) {
       await page.locator(`[data-answer="${answer}"]`).click();
-      await expect(page.locator('#quiz-feedback')).toContainText('答对了');
-      await page.locator('#quiz-next').click();
+      await expect(page.locator("#quiz-feedback")).toContainText("答对了");
+      await page.locator("#quiz-next").click();
     }
-    if(index<5) await expect(page.locator('[data-lesson="6"]')).toBeDisabled();
+    if (index < 5)
+      await expect(page.locator('[data-lesson="6"]')).toBeDisabled();
   }
-  await expect(page.locator('.realm-progress')).toContainText('金丹 · 圆满');
-  await page.screenshot({path:`artifacts/learning-${info.project.name}.png`, fullPage:true});
-  await page.getByRole('button',{name:'关闭修炼',exact:true}).click();
+  await expect(page.locator(".realm-progress")).toContainText("金丹 · 圆满");
+  await page.screenshot({
+    path: `artifacts/learning-${info.project.name}.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "关闭修炼", exact: true }).click();
   await page.reload();
-  await expect(page.locator('#progress')).toHaveText('9/9');
-  await page.locator('#study').click();
+  await expect(page.locator("#progress")).toHaveText("9/9");
+  await page.locator("#study").click();
   await expect(page.locator('[data-lesson="8"]')).toBeEnabled();
-  await expect(page.locator('.realm-progress')).toContainText('金丹 · 圆满');
+  await expect(page.locator(".realm-progress")).toContainText("金丹 · 圆满");
+});
+
+test("师父面板显示规则事实，模型文本安全呈现，失败回退不改变牌局", async ({
+  page,
+}, info) => {
+  await start(page);
+  const before = await page.locator("#live-table").getAttribute("aria-label");
+  const wallet = await page.locator("#wallet").textContent();
+  let captured: any;
+  await page.route("**/api/coach", async (route) => {
+    captured = route.request().postDataJSON();
+    await route.fulfill({
+      json: {
+        source: "model",
+        text: "<img src=x onerror=alert(1)>先看公开行动，再衡量价格。",
+      },
+    });
+  });
+  await page.getByRole("button", { name: "请教青玄师父" }).click();
+  await expect(page.locator("#coach-dialog")).toBeVisible();
+  await expect(page.locator("#coach-source")).toHaveText("规则计算 · 本地");
+  await page.getByRole("button", { name: "看懂局面", exact: true }).click();
+  await expect(page.locator("#coach-source")).toContainText("AI 解读");
+  await expect(page.locator("#coach-reply")).toContainText("<img src=x");
+  await expect(page.locator("#coach-reply img")).toHaveCount(0);
+  expect(captured.snapshot.heroCards).toHaveLength(2);
+  expect(captured.snapshot.deck).toBeUndefined();
+  expect(captured.snapshot.players.some((p: any) => "hole" in p)).toBeFalsy();
+  await page.unroute("**/api/coach");
+  await page.route("**/api/coach", (route) =>
+    route.fulfill({ status: 503, json: { error: "not-configured" } }),
+  );
+  await page.getByRole("button", { name: "衡量价格", exact: true }).click();
+  await expect(page.locator("#coach-source")).toContainText("本地指引");
+  await expect(page.locator("#coach-reply")).toContainText("不是实际胜率");
+  await page.screenshot({
+    path: `artifacts/mentor-local-${info.project.name}.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "关闭师父", exact: true }).click();
+  await expect(page.locator("#resume")).toBeVisible();
+  await expect(page.locator("#live-table")).toHaveAttribute(
+    "aria-label",
+    before!,
+  );
+  await expect(page.locator("#wallet")).toHaveText(wallet!);
 });

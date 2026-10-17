@@ -1,0 +1,232 @@
+// Native Windows CI test through Tauri's standard WebDriver bridge, not a browser substitute.
+import { spawn } from "node:child_process";
+import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { resolve, join } from "node:path";
+import assert from "node:assert/strict";
+
+if (process.platform !== "win32")
+  throw new Error("This native smoke test requires Windows.");
+const application =
+  process.env.TAURI_SMOKE_APP || resolve("src-tauri/target/release/app.exe");
+if (!existsSync(application))
+  throw new Error(`Application missing: ${application}`);
+const output = resolve("artifacts/windows-native");
+mkdirSync(output, { recursive: true });
+const bridge = spawn(join(homedir(), ".cargo/bin/tauri-driver.exe"), [], {
+  stdio: ["ignore", "pipe", "pipe"],
+});
+let logs = "";
+bridge.stdout.on("data", (data) => {
+  logs += data;
+});
+bridge.stderr.on("data", (data) => {
+  logs += data;
+});
+let startupError;
+bridge.on("error", (error) => {
+  startupError = error;
+});
+let session;
+async function command(
+  path,
+  body,
+  method = body === undefined ? "GET" : "POST",
+) {
+  const response = await fetch("http://127.0.0.1:4444" + path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  const result = await response.json();
+  if (!response.ok || result.value?.error)
+    throw new Error(JSON.stringify(result));
+  return result.value;
+}
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function until(predicate, label, timeout = 30_000) {
+  const end = Date.now() + timeout;
+  let last;
+  while (Date.now() < end) {
+    if (startupError) throw startupError;
+    try {
+      if (await predicate()) return;
+    } catch (error) {
+      last = error;
+    }
+    await sleep(100);
+  }
+  throw new Error(`Timeout: ${label}${last ? " " + last.message : ""}`);
+}
+const execute = (script) =>
+  command(`/session/${session}/execute/sync`, { script, args: [] });
+async function click(selector) {
+  const value = await command(`/session/${session}/element`, {
+    using: "css selector",
+    value: selector,
+  });
+  const id = value["element-6066-11e4-a52e-4f735466cecf"];
+  await command(`/session/${session}/element/${id}/click`, {});
+}
+const idle = () =>
+  until(
+    () =>
+      execute(
+        "return document.querySelector('#live-table')?.dataset.busy === 'false'",
+      ),
+    "animations finish",
+  );
+async function screenshot(name) {
+  const bytes = await command(`/session/${session}/screenshot`);
+  writeFileSync(join(output, name + ".png"), Buffer.from(bytes, "base64"));
+}
+try {
+  await until(async () => {
+    await command("/status");
+    return true;
+  }, "Tauri driver starts");
+  const created = await command("/session", {
+    capabilities: {
+      alwaysMatch: { browserName: "wry", "tauri:options": { application } },
+    },
+  });
+  session = created.sessionId;
+  assert.ok(session, "Native session must exist");
+  await until(
+    () =>
+      execute(
+        "return !!document.querySelector('#start') && !document.querySelector('#start').disabled",
+      ),
+    "native page initializes",
+  );
+  // The CI machine has an isolated user profile. These are test fixtures, never a user's save.
+  await execute(
+    "localStorage.setItem('wendao:preferences:v1',JSON.stringify({sound:false,reducedMotion:true,quality:'balanced'}));localStorage.removeItem('wendao:practice:v1');",
+  );
+  await command(`/session/${session}/refresh`, {});
+  await until(
+    () =>
+      execute(
+        "return !!document.querySelector('#start') && !document.querySelector('#start').disabled",
+      ),
+    "fresh native profile",
+  );
+  await click("#start");
+  await idle();
+  await until(
+    () => execute("return !document.querySelector('#call').disabled"),
+    "hero turn",
+  );
+  await click("#raise");
+  await until(
+    () => execute("return document.querySelector('#raise-dialog').open"),
+    "raise sheet",
+  );
+  assert.equal(
+    await execute(
+      "return document.querySelector('#raise-confirm').getBoundingClientRect().bottom <= innerHeight",
+    ),
+    true,
+  );
+  await screenshot("raise");
+  await click("#raise-confirm");
+  await idle();
+  const before = await execute(
+    "return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent}",
+  );
+  if (
+    await execute(
+      "return document.querySelector('#live-table').dataset.street !== 'complete'",
+    )
+  ) {
+    await command(`/session/${session}/refresh`, {});
+    await idle();
+    await until(
+      () => execute("return !document.querySelector('#resume').hidden"),
+      "resume after native reload",
+    );
+    assert.deepEqual(
+      await execute(
+        "return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent}",
+      ),
+      before,
+    );
+    await click("#resume");
+    await idle();
+  }
+  let actions = 0;
+  while (
+    await execute(
+      "return document.querySelector('#live-table').dataset.street !== 'complete'",
+    )
+  ) {
+    assert.ok(++actions < 40, "The hand must terminate");
+    await until(
+      () => execute("return !document.querySelector('#call').disabled"),
+      "call enabled",
+    );
+    await click("#call");
+    await idle();
+  }
+  await screenshot("showdown");
+  await click("#review");
+  await until(
+    () => execute("return document.querySelector('#review-dialog').open"),
+    "review",
+  );
+  assert.equal(
+    await execute(
+      "return document.querySelectorAll('.action-history li').length > 0",
+    ),
+    true,
+  );
+  await click("#review-dialog .close-button");
+  await command(`/session/${session}/window/rect`, { width: 360, height: 690 });
+  assert.equal(
+    await execute(
+      "const r=document.querySelector('#next').getBoundingClientRect();return r.bottom <= innerHeight && r.height >= 44 && document.documentElement.scrollWidth <= innerWidth",
+    ),
+    true,
+  );
+  await screenshot("narrow-window");
+  writeFileSync(
+    join(output, "result.json"),
+    JSON.stringify(
+      {
+        platform: process.platform,
+        application,
+        actions,
+        checks: [
+          "native launch",
+          "raise sheet",
+          "reload persistence",
+          "showdown",
+          "public action review",
+          "360px layout",
+        ],
+        passed: true,
+      },
+      null,
+      2,
+    ),
+  );
+  console.log(
+    "Windows native smoke passed: installed app, raise, save/reload, showdown, review, narrow window.",
+  );
+} catch (error) {
+  if (session) {
+    try {
+      await screenshot("failure");
+    } catch {}
+  }
+  throw error;
+} finally {
+  if (session) {
+    try {
+      await command(`/session/${session}`, undefined, "DELETE");
+    } catch {}
+  }
+  bridge.kill();
+  writeFileSync(join(output, "driver.log"), logs);
+}

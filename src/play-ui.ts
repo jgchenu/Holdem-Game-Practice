@@ -11,10 +11,18 @@ import {
 import { cardText } from "./core/cards";
 import { chooseAction } from "./core/bot";
 import { loadSession, saveSession, nextHand } from "./session";
-import { lessons, learningStages, learningRealm, isLessonUnlocked, loadLearning, saveLearning } from "./learning";
+import {
+  lessons,
+  learningStages,
+  learningRealm,
+  isLessonUnlocked,
+  loadLearning,
+  saveLearning,
+} from "./learning";
 import { guidance } from "./coach";
+import { createMentorPanel } from "./mentor-panel";
 import "./play.css";
-import { flushStorage,storageHealthy } from './storage';
+import { flushStorage, storageHealthy } from "./storage";
 
 const icons = {
   sound:
@@ -31,7 +39,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <div class="live-status"><span id="stage-label">静心 · 入席</span><span id="hand-number">单人练习</span></div>
     <section class="live-table-wrap"><div id="live-table" role="img" aria-label="六人牌桌，尚未发牌"></div><div id="loading" role="status">正在铺开牌席…</div><button id="inspect" class="look-button" disabled aria-label="抬起或放下手牌">观牌</button></section>
     <section class="play-dock" aria-label="牌局操作">
-      <div class="live-mentor"><span class="mentor-emblem" aria-hidden="true">玄</span><div><div class="mentor-heading">青玄师父 <span class="mentor-badge">规则指引</span></div><p id="tip" aria-live="polite"></p></div></div>
+      <div class="live-mentor"><span class="mentor-emblem" aria-hidden="true">玄</span><div><div class="mentor-heading">青玄师父 <button id="coach-open" class="mentor-badge mentor-consult" aria-label="请教青玄师父">请教师父 ›</button></div><p id="tip" aria-live="polite"></p></div></div>
       <div class="turn-info"><span id="turn-status" role="status">静心入席</span><span>你的灵石 <strong id="wallet">1,000</strong></span></div>
       <div id="start-panel" class="control-panel"><button id="start" class="primary-button" disabled>入席修炼 <span>→</span></button></div>
       <div id="turn-panel" class="control-panel turn-actions" hidden><button id="fold" class="table-action fold-action">弃牌<small>放下此手</small></button><button id="call" class="table-action call-action">过牌<small>无需投入</small></button><button id="raise" class="table-action raise-action">加注<small>选择金额</small></button></div>
@@ -44,8 +52,9 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <dialog id="raise-dialog" class="bottom-sheet" aria-labelledby="raise-title"><form id="raise-form"><div class="dialog-header"><div><p class="eyebrow">CHOOSE YOUR WAGER</p><h2 id="raise-title">落子 · 加注</h2></div><button type="button" class="close-button" aria-label="关闭加注">×</button></div><label class="amount-field" for="raise-amount"><span>本轮总投入</span><div><input id="raise-amount" type="number" inputmode="numeric" step="1" required aria-describedby="raise-detail raise-error"/><span>灵石</span></div></label><input id="raise-range" type="range" step="1" aria-label="调整本轮总投入"/><div class="bet-presets"><button type="button" data-bet="min">最小</button><button type="button" data-bet="half">半池</button><button type="button" data-bet="pot">一池</button><button type="button" data-bet="all">全下</button></div><p id="raise-detail" class="raise-detail"></p><p id="raise-error" class="input-error" role="alert"></p><button id="raise-confirm" class="primary-button sheet-confirm" type="submit">确认加注</button></form></dialog>
   <dialog id="review-dialog" class="bottom-sheet" aria-labelledby="review-title"><div class="dialog-header"><div><p class="eyebrow">LEARN FROM EVERY HAND</p><h2 id="review-title">明心 · 本手复盘</h2></div><button class="close-button" aria-label="关闭复盘">×</button></div><div id="review-body"></div></dialog>
   <dialog id="study-dialog" class="bottom-sheet" aria-labelledby="study-title"><div class="dialog-header"><div><p class="eyebrow">SMALL STEPS, DEEPER WISDOM</p><h2 id="study-title">悟道阁 · 修炼</h2></div><button class="close-button" aria-label="关闭修炼">×</button></div><div id="study-body"></div></dialog>
+  <dialog id="coach-dialog" class="bottom-sheet" aria-labelledby="coach-title"><div class="dialog-header"><div><p class="eyebrow">A MOMENT OF CLARITY</p><h2 id="coach-title">问心 · 青玄师父</h2></div><button class="close-button" aria-label="关闭师父">×</button></div><p class="study-intro">先看事实，再想进退。请教时牌局会暂停，关闭后可自行继续。</p><dl id="coach-facts" class="coach-facts"></dl><p class="dialog-footnote">牌型与价格由规则程序计算。直接价格不是胜率。</p><div class="coach-topics"><button data-coach-topic="situation">看懂局面</button><button data-coach-topic="price">衡量价格</button><button data-coach-topic="review">复盘思路</button></div><div class="coach-response"><p id="coach-source" role="status"></p><p id="coach-reply" aria-live="polite"></p><button id="coach-stop" class="text-button" hidden>停止请教</button></div><p class="dialog-footnote">本地指引无需联网。启用 AI 请教时，仅发送本人底牌、公共牌与公开行动；模型不能读取牌堆或代替你操作。</p></dialog>
   <dialog id="settings-dialog" aria-labelledby="settings-title"><div class="dialog-header"><div><p class="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">调息 · 体验设置</h2></div><button class="close-button" aria-label="关闭设置">×</button></div><label class="setting-row"><span>音效<small>轻柔的翻牌与灵石提示音</small></span><input id="sound-toggle" type="checkbox" role="switch"/></label><label class="setting-row"><span>减少动态效果<small>缩短位移与翻转，关闭装饰粒子</small></span><input id="motion-toggle" type="checkbox" role="switch"/></label><label class="setting-row"><span>灵气效果<small>均衡模式减少装饰粒子</small></span><select id="quality"><option value="fine">细腻</option><option value="balanced">均衡</option></select></label><div class="metrics"><span>当前浏览器帧间隔采样</span><strong id="fps">等待有效样本</strong><small>循环采样不等于 GPU 或手机真机性能测试。</small></div><p id="settings-feedback" class="dialog-footnote">偏好保存在本设备。</p><a class="demo-link" href="/?mode=demo">查看固定动效演示 →</a></dialog>
-  <dialog id="about-dialog" aria-labelledby="about-title"><div class="dialog-header"><div><p class="eyebrow">BEGIN YOUR PRACTICE</p><h2 id="about-title">云隐宗 · 练习桌</h2></div><button class="close-button" aria-label="关闭说明">×</button></div><p class="about-copy">标准六人无限注德州扑克。每人两张底牌，与五张公共牌组合出最佳五张牌。跟注、加注或弃牌，按顺序行动。你可以通过最好的牌获胜，也可以在其他人都弃牌时获胜。</p><div class="about-callout">这是单人虚拟灵石练习。五名电脑对手采用本地策略，不读取你的底牌；师父提供规则指引，尚未接入大语言模型。</div><p class="about-copy">牌局自动保存在本设备。刷新或切后台后会暂停，点击继续即可恢复。每手结束后可复盘；灵石耗尽的座位会在下一手免费补给 1,000。</p><p class="about-copy web-install-note">Web 正式版可添加到主屏幕。首次联网加载完成后，牌局与课程可离线使用；浏览器清理网站数据会移除本地进度。新版本将在旧页面全部关闭后启用。</p><a class="demo-link" href="/?mode=demo">体验固定动效样板 →</a></dialog>
+  <dialog id="about-dialog" aria-labelledby="about-title"><div class="dialog-header"><div><p class="eyebrow">BEGIN YOUR PRACTICE</p><h2 id="about-title">云隐宗 · 练习桌</h2></div><button class="close-button" aria-label="关闭说明">×</button></div><p class="about-copy">标准六人无限注德州扑克。每人两张底牌，与五张公共牌组合出最佳五张牌。跟注、加注或弃牌，按顺序行动。你可以通过最好的牌获胜，也可以在其他人都弃牌时获胜。</p><div class="about-callout">这是单人虚拟灵石练习。五名电脑对手采用本地策略，不读取你的底牌；师父提供本地规则指引；配置服务后可请教 AI，模型解读可能有误。</div><p class="about-copy">牌局自动保存在本设备。刷新或切后台后会暂停，点击继续即可恢复。每手结束后可复盘；灵石耗尽的座位会在下一手免费补给 1,000。</p><p class="about-copy web-install-note">Web 正式版可添加到主屏幕。首次联网加载完成后，牌局与课程可离线使用；浏览器清理网站数据会移除本地进度。新版本将在旧页面全部关闭后启用。</p><a class="demo-link" href="/?mode=demo">体验固定动效样板 →</a></dialog>
 `;
 
 const get = <T extends HTMLElement>(id: string) =>
@@ -160,7 +169,8 @@ function updateUI() {
             : "轮到你行动"
           : `${view.players[view.actor!].name} · 行动中`;
   get("save-status").textContent = savedOK
-    ? notice || (navigator.onLine ? "本地保存 · 单人练习" : "本地保存 · 离线练习")
+    ? notice ||
+      (navigator.onLine ? "本地保存 · 单人练习" : "本地保存 · 离线练习")
     : saved.corrupt && !hand
       ? "旧记录无法读取，请重新入席"
       : "当前浏览器无法保存，请保持页面开启";
@@ -341,6 +351,17 @@ button("about").addEventListener("click", (event) =>
   open("about-dialog", event.currentTarget as HTMLElement),
 );
 
+const mentor = createMentorPanel(get<HTMLDialogElement>("coach-dialog"));
+button("coach-open").addEventListener("click", (event) => {
+  if (hand && hand.street !== "complete") {
+    paused = true;
+    persist();
+    updateUI();
+  }
+  mentor.prepare(hand ? observe(hand, 0) : null);
+  open("coach-dialog", event.currentTarget as HTMLElement);
+});
+
 function setAmount(amount: number) {
   get<HTMLInputElement>("raise-amount").value = String(amount);
   get<HTMLInputElement>("raise-range").value = String(amount);
@@ -368,8 +389,12 @@ function amountChanged() {
   if (valid) {
     const range = get<HTMLInputElement>("raise-range");
     range.value = String(amount);
-    const min = Number(range.min), max = Number(range.max);
-    range.style.setProperty('--progress', `${max > min ? (amount-min)/(max-min)*100 : 0}%`);
+    const min = Number(range.min),
+      max = Number(range.max);
+    range.style.setProperty(
+      "--progress",
+      `${max > min ? ((amount - min) / (max - min)) * 100 : 0}%`,
+    );
   }
 }
 button("raise").addEventListener("click", (event) => {
@@ -456,7 +481,7 @@ let lessonIndex: number | null = null,
 function lessonList() {
   lessonIndex = null;
   get("study-body").innerHTML =
-    `<p class="study-intro">每次练一点，先看懂，再上桌。完成当前境界三课，开启下一境。</p><div class="realm-progress"><span>${learningRealm(learned)}</span><span>${learned.length} / ${lessons.length}</span></div>${learningStages.map((stage, n) => `<section class="learning-stage"><h3 class="section-label">${stage.title}<small>${stage.detail}</small></h3>${lessons.map((lesson, i) => lesson.stage !== n ? "" : `<button class="lesson-card" data-lesson="${i}" ${isLessonUnlocked(i, learned) ? "" : "disabled"}><span class="lesson-number">${["壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"][i]}</span><span><strong>${lesson.title}</strong><small>${lesson.subtitle} · ${lesson.questions.length} 道练习</small></span><span class="lesson-status">${learned.includes(lesson.id) ? "已完成 ✓" : isLessonUnlocked(i, learned) ? "修炼 →" : "待突破"}</span></button>`).join("")}</section>`).join("")}<p class="dialog-footnote">境界只表示本设备的课程进度。练习使用预设讲解，不是对实战能力的评级。</p>`;
+    `<p class="study-intro">每次练一点，先看懂，再上桌。完成当前境界三课，开启下一境。</p><div class="realm-progress"><span>${learningRealm(learned)}</span><span>${learned.length} / ${lessons.length}</span></div>${learningStages.map((stage, n) => `<section class="learning-stage"><h3 class="section-label">${stage.title}<small>${stage.detail}</small></h3>${lessons.map((lesson, i) => (lesson.stage !== n ? "" : `<button class="lesson-card" data-lesson="${i}" ${isLessonUnlocked(i, learned) ? "" : "disabled"}><span class="lesson-number">${["壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"][i]}</span><span><strong>${lesson.title}</strong><small>${lesson.subtitle} · ${lesson.questions.length} 道练习</small></span><span class="lesson-status">${learned.includes(lesson.id) ? "已完成 ✓" : isLessonUnlocked(i, learned) ? "修炼 →" : "待突破"}</span></button>`)).join("")}</section>`).join("")}<p class="dialog-footnote">境界只表示本设备的课程进度。练习使用预设讲解，不是对实战能力的评级。</p>`;
   get("study-body")
     .querySelectorAll<HTMLButtonElement>("[data-lesson]")
     .forEach((el) =>
@@ -581,11 +606,22 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("pagehide", persist);
-window.addEventListener('wendao:suspend',()=>{
-  if(hand&&hand.street!=='complete'){paused=true;persist();updateUI();}
+window.addEventListener("wendao:suspend", () => {
+  if (hand && hand.street !== "complete") {
+    paused = true;
+    persist();
+    updateUI();
+  }
 });
-window.addEventListener('wendao:storage-error',()=>{savedOK=false;updateUI();});
-if (import.meta.hot) import.meta.hot.dispose(() => game.destroy(true));
+window.addEventListener("wendao:storage-error", () => {
+  savedOK = false;
+  updateUI();
+});
+if (import.meta.hot)
+  import.meta.hot.dispose(() => {
+    mentor.dispose();
+    game.destroy(true);
+  });
 
 window.addEventListener("online", updateUI);
 window.addEventListener("offline", updateUI);
