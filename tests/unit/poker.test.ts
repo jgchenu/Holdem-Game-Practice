@@ -7,6 +7,7 @@ import {
   legalActions,
   observe,
   isValidHand,
+  restoreHand,
   type HandState,
 } from "../../src/core/poker";
 import { chooseAction } from "../../src/core/bot";
@@ -212,6 +213,64 @@ test("全部对手弃牌直接结算，不泄露底牌", () => {
   assert.ok(!("deck" in view));
   assert.ok(!("burn" in view));
   view.players.slice(1).forEach((p) => assert.equal(p.hole, null));
+  assert.equal(s.result!.pots[0].amount, 20);
+  assert.equal(s.result!.pots[1].amount, 10);
+  assert.equal(s.result!.pots[1].refund, true);
+});
+
+test("结算存档重算底池、牌型和个人账本，缺损或篡改结果不会进入复盘", () => {
+  const settled = playPassive(createHand({ names }));
+  assert.ok(restoreHand(settled));
+  for (const mutate of [
+    (s: HandState) => {
+      delete (s.result as any).hands;
+    },
+    (s: HandState) => {
+      s.result!.hands[0].score += 1;
+    },
+    (s: HandState) => {
+      s.result!.pots[0].amount += 1;
+    },
+    (s: HandState) => {
+      s.players[0].stack++;
+      s.players[1].stack--;
+    },
+    (s: HandState) => {
+      s.log[0].street = "unknown" as any;
+    },
+  ]) {
+    const corrupt = structuredClone(settled);
+    mutate(corrupt);
+    assert.equal(isValidHand(corrupt), false);
+    assert.equal(restoreHand(corrupt), null);
+  }
+  const active = createHand({ names });
+  active.players[0].stack++;
+  active.players[1].stack--;
+  assert.equal(
+    isValidHand(active),
+    false,
+    "Global balance alone cannot validate individual wallets",
+  );
+});
+
+test("旧版单底池弃牌存档可迁移，手牌与灵石保持不变", () => {
+  let s = createHand({ names });
+  while (s.street !== "complete") s = act(s, s.actor!, { type: "fold" });
+  const legacy = structuredClone(s);
+  legacy.result!.pots = [
+    { ...legacy.result!.pots[0], amount: legacy.result!.total },
+  ];
+  assert.equal(isValidHand(legacy), true);
+  const restored = restoreHand(JSON.parse(JSON.stringify(legacy)))!;
+  assert.deepEqual(restored.players, s.players);
+  assert.deepEqual(restored.deck, s.deck);
+  assert.deepEqual(restored.result, s.result);
+  assert.equal(
+    legacy.result!.pots.length,
+    1,
+    "Restoration must not mutate its input",
+  );
 });
 
 test("随机策略对局始终结束、筹码守恒、牌不重复、观察隔离；存档损坏被拒绝", () => {

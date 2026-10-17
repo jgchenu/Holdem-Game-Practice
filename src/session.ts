@@ -1,5 +1,5 @@
-import { createHand, isValidHand, type HandState } from "./core/poker";
-import { readStorage,writeStorage } from './storage';
+import { createHand, restoreHand, type HandState } from "./core/poker";
+import { readStorage, writeStorage } from "./storage";
 
 export const playerNames = [
   "你",
@@ -21,16 +21,13 @@ export function loadSession(): SavedSession {
     if (!raw) return { hand: null, paused: false, corrupt: false };
     if (raw.length > 400_000) throw new Error("存档过大");
     const saved = JSON.parse(raw);
-    if (
-      saved.version !== 1 ||
-      !isValidHand(saved.hand) ||
-      saved.hand.players.length !== 6
-    )
+    const hand = restoreHand(saved.hand);
+    if (saved.version !== 1 || !hand || hand.players.length !== 6)
       throw new Error("无效存档");
     // A restored active hand always waits for explicit user resume.
     return {
-      hand: saved.hand,
-      paused: saved.hand.street !== "complete",
+      hand,
+      paused: hand.street !== "complete",
       corrupt: false,
     };
   } catch {
@@ -39,7 +36,9 @@ export function loadSession(): SavedSession {
 }
 export function saveSession(hand: HandState | null): boolean {
   try {
-    return hand ? writeStorage(key, JSON.stringify({ version: 1, hand })) : true;
+    return hand
+      ? writeStorage(key, JSON.stringify({ version: 1, hand }))
+      : true;
   } catch {
     return false;
   }

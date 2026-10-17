@@ -20,7 +20,7 @@ function localExplanation(snapshot: CoachSnapshot, topic: CoachTopic) {
   if (topic === "price")
     return facts.directPricePercent !== null
       ? `跟注需要 ${facts.call} 灵石；你可竞争的投入在跟注后合计 ${facts.eligiblePotAfterCall}，直接价格门槛为 ${facts.directPricePercent}%。这不是实际胜率，不能单凭这个数决定跟注。后续下注、对手范围和边池资格仍要分别考虑。`
-      : "当前没有需要补齐的跟注价格。轮到你时，先检查是否可以过牌；赔率为零不代表你能赢。";
+      : "当前没有需要补齐的跟注价格。轮到你时，先检查是否可以过牌；能够免费继续看牌，并不代表最终会赢。";
   if (topic === "review")
     return facts.net !== null
       ? `本手净${facts.net >= 0 ? "得" : "支出"} ${Math.abs(facts.net)} 灵石。先回顾每轮行动时可知的信息，再考虑位置、范围与投入成本。一次输赢不足以判断决策优劣，可在「本手复盘」查看公开行动记录。`

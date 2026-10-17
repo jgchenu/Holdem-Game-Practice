@@ -2,7 +2,8 @@ import { evaluate, type Card, type HandRank, shuffledDeck } from "./cards";
 
 export type Street = "preflop" | "flop" | "turn" | "river" | "complete";
 export type Action =
-  { type: "fold" | "check" | "call" } | { type: "raise"; to: number };
+  | { type: "fold" | "check" | "call" }
+  | { type: "raise"; to: number };
 export interface Player {
   name: string;
   stack: number;
@@ -346,12 +347,24 @@ function finish(state: HandState, showdown: boolean) {
     !p.folded && p.hole.length ? [i] : [],
   );
   if (!showdown) {
+    const winner = remaining[0];
+    const matched = Math.max(
+      ...state.players.filter((_p, i) => i !== winner).map((p) => p.totalBet),
+    );
+    const refund = Math.max(0, state.players[winner].totalBet - matched);
     result.pots.push({
-      amount: total,
+      amount: total - refund,
       winners: remaining,
       eligible: remaining,
       refund: false,
     });
+    if (refund)
+      result.pots.push({
+        amount: refund,
+        winners: remaining,
+        eligible: remaining,
+        refund: true,
+      });
     result.payouts[remaining[0]] = total;
   } else {
     remaining.forEach((i) => {
@@ -439,8 +452,37 @@ export function observe(state: HandState, viewer: number): Observation {
     })),
     legal: legalActions(state, viewer),
     result: state.result ? structuredClone(state.result) : null,
-    log: state.log.map(entry => ({...entry})),
+    log: state.log.map((entry) => ({ ...entry })),
   };
+}
+
+function recomputeSavedResult(state: HandState): HandState {
+  const checked = structuredClone(state);
+  if (checked.result) {
+    const { payouts, showdown } = checked.result;
+    checked.players.forEach((p, i) => {
+      p.stack -= payouts[i];
+    });
+    finish(checked, showdown);
+  }
+  return checked;
+}
+const stableSave = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(stableSave)
+    : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.entries(value)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, v]) => [key, stableSave(v)]),
+        )
+      : value;
+const sameSave = (a: unknown, b: unknown) =>
+  JSON.stringify(stableSave(a)) === JSON.stringify(stableSave(b));
+
+/** Validate first, then upgrade derived settlement fields without changing the wallet or deal. */
+export function restoreHand(value: unknown): HandState | null {
+  return isValidHand(value) ? recomputeSavedResult(value) : null;
 }
 
 /** Reject corrupted / incompatible local saves before exposing a resumed hand. */
@@ -460,6 +502,7 @@ export function isValidHand(value: unknown): value is HandState {
       s.dealer >= s.players.length ||
       !Number.isSafeInteger(s.bigBlind) ||
       s.bigBlind < 2 ||
+      s.bigBlind % 2 !== 0 ||
       s.smallBlind !== s.bigBlind / 2 ||
       !Number.isSafeInteger(s.handNumber) ||
       s.handNumber < 1
@@ -485,11 +528,13 @@ export function isValidHand(value: unknown): value is HandState {
           typeof p.folded !== "boolean" ||
           typeof p.allIn !== "boolean" ||
           typeof p.lastAction !== "string" ||
+          p.lastAction.length > 80 ||
           ![0, 2].includes(p.hole.length) ||
           [p.stack, p.startingStack, p.totalBet, p.streetBet].some(
             (n) => !Number.isSafeInteger(n) || n < 0,
           ) ||
-          p.streetBet > p.totalBet,
+          p.streetBet > p.totalBet ||
+          p.totalBet > p.startingStack,
       )
     )
       return false;
@@ -498,6 +543,15 @@ export function isValidHand(value: unknown): value is HandState {
         (sum, p) => sum + p.stack + (s.street === "complete" ? 0 : p.totalBet),
         0,
       ) !== s.players.reduce((sum, p) => sum + p.startingStack, 0)
+    )
+      return false;
+    if (
+      s.street !== "complete" &&
+      s.players.some(
+        (p) =>
+          p.stack + p.totalBet !== p.startingStack ||
+          (p.allIn && p.stack !== 0),
+      )
     )
       return false;
     if (
@@ -520,7 +574,13 @@ export function isValidHand(value: unknown): value is HandState {
           e.seat < 0 ||
           e.seat >= s.players.length ||
           typeof e.text !== "string" ||
-          e.text.length > 80,
+          e.text.length > 80 ||
+          !Object.hasOwn(streetNames, e.street) ||
+          !["fold", "check", "call", "raise"].includes(e.type) ||
+          !Number.isSafeInteger(e.amount) ||
+          e.amount < 0 ||
+          !Number.isSafeInteger(e.potBefore) ||
+          e.potBefore < 0,
       )
     )
       return false;
@@ -534,22 +594,69 @@ export function isValidHand(value: unknown): value is HandState {
     if (
       s.board.length !== expected ||
       ![0, 3, 4, 5].includes(s.board.length) ||
+      s.burn.length !==
+        ({ 0: 0, 3: 1, 4: 2, 5: 3 } as Record<number, number>)[
+          s.board.length
+        ] ||
+      !Array.isArray(s.pending) ||
+      new Set(s.pending).size !== s.pending.length ||
       s.pending.some(
         (i) => !Number.isInteger(i) || i < 0 || i >= s.players.length,
       )
     )
       return false;
-    if (s.street === "complete")
-      return (
-        s.actor === null &&
-        !!s.result &&
-        s.result.payouts.length === s.players.length &&
-        s.result.payouts.every((n) => Number.isSafeInteger(n) && n >= 0) &&
-        s.result.payouts.reduce((a, b) => a + b, 0) === s.result.total
-      );
+    if (s.street === "complete") {
+      if (
+        !(
+          s.actor === null &&
+          s.pending.length === 0 &&
+          !!s.result &&
+          typeof s.result.showdown === "boolean" &&
+          s.result.payouts.length === s.players.length &&
+          s.result.payouts.every((n) => Number.isSafeInteger(n) && n >= 0) &&
+          s.result.payouts.reduce((a, b) => a + b, 0) === s.result.total &&
+          s.result.total ===
+            s.players.reduce((sum, p) => sum + p.totalBet, 0) &&
+          s.players.every(
+            (p, i) =>
+              p.stack + p.totalBet - s.result!.payouts[i] === p.startingStack,
+          )
+        )
+      )
+        return false;
+      if (s.result.showdown && s.board.length !== 5) return false;
+      if (
+        !s.result.showdown &&
+        s.players.filter((p) => !p.folded && p.hole.length).length !== 1
+      )
+        return false;
+      // Recompute the derived settlement rather than trusting persisted pots/ranks/payouts.
+      const checked = recomputeSavedResult(s);
+      if (sameSave(s.result, checked.result)) return true;
+      // Older v1 fold saves grouped an unmatched return into the single winning pot.
+      // Accept that exact historical shape and normalize it in restoreHand.
+      if (!s.result.showdown) {
+        const remaining = s.players.flatMap((p, i) =>
+          !p.folded && p.hole.length ? [i] : [],
+        );
+        return sameSave(s.result, {
+          ...checked.result,
+          pots: [
+            {
+              amount: s.result.total,
+              winners: remaining,
+              eligible: remaining,
+              refund: false,
+            },
+          ],
+        });
+      }
+      return false;
+    }
     return (
       s.actor !== null &&
       s.pending.includes(s.actor) &&
+      s.pending.every((i) => eligible(s.players[i])) &&
       !!legalActions(s) &&
       s.result === null
     );

@@ -139,6 +139,17 @@ test("真实牌局可以连续完成、查看公开行动复盘并开始下一�
   await idle(page);
   await expect(page.locator("#hand-number")).toHaveText("第 2 手");
   await expect(page.locator("#about")).toBeVisible();
+  await page.addInitScript((value) => {
+    delete value.result.hands;
+    localStorage.setItem(
+      "wendao:practice:v1",
+      JSON.stringify({ version: 1, hand: value }),
+    );
+  }, raw);
+  await page.reload();
+  await expect(page.locator("#start")).toBeVisible();
+  await expect(page.locator("#start")).toBeEnabled();
+  await expect(page.locator("#save-status")).toContainText("旧记录无法读取");
 });
 
 test("三项修炼、答错重试、进度保存与短屏操作区可见", async ({ page }) => {

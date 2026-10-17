@@ -16,7 +16,7 @@ chars.update("♠♥♣♦←→↑↓✓×−—…◇%0123456789,./")
 source = root / "artifacts/fonts/NotoSerifSC.ttf"
 if sha256(source.read_bytes()).hexdigest() != "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9":
     raise ValueError("Upstream font revision differs; review it before regenerating the shipped subset.")
-font = TTFont(source)
+font = TTFont(source, recalcTimestamp=False)
 options = subset.Options()
 options.name_IDs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 14, 16, 17, 25]
 options.name_legacy = True
