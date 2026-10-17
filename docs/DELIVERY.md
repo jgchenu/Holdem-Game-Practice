@@ -1,112 +1,79 @@
 # 跨平台持续交付与验收
 
-目标：完成移动端优先的《问道牌途》在 iOS、Android、Windows、macOS 和 Web 的开发与验证。美术与动效要求以根目录 AGENTS.md 为准。未实际验证的事项保持待办，安装包构建通过不等于运行或真机性能通过。
+目标：完成移动端优先的《问道牌途》在 iOS、Android、Windows、macOS 和 Web 的开发与验证。美术与动效要求以根目录 AGENTS.md 为准。持续目标仍在进行，未实际执行的验收保持待办，构建通过不等于真机运行或性能通过。
 
-## 已完成的共同能力
+## 共同能力
 
-- 独立扑克规则、加密随机洗牌、六人单人练习、主池与边池、七选五比牌、平局分池。
-- 五名只接收可见信息的本地策略对手；不是求解器或大语言模型。
-- 九课三阶段、十八道练习、学习进度、本手公开行动复盘。
-- 移动端底部操作、加注确认面板、音效、减少动态效果、暂停、刷新恢复。
-- 构建与类型检查通过；15 项核心与师父服务测试（含 240 局随机策略检查）通过。
-- Chromium 手机/窄屏/桌面与移动尺寸 WebKit 共 34 项浏览器场景通过；2 项重复进阶流程仅在两种移动引擎运行，另两尺寸主动跳过。
+- 独立扑克规则、加密随机洗牌、六人单人练习、七选五比牌、主池与边池、平局分池、未跟注返还。
+- 五名只接收本人底牌与公开信息的本地策略对手；当前对手不是求解器或大语言模型。
+- 九课三阶段、十八道练习、逐境解锁与学习进度、本手公开行动复盘。
+- 手机底部操作、加注确认、减少动态效果、暂停、存档恢复；损坏的结算记录被拒绝，旧版弃牌结算可迁移。
+- 师父面板先展示程序事实；兼容接口在服务端持有密钥，模型文本安全呈现，离线或失败时回退本地指引。
+- 原生 Preferences 存储桥接、Web 离线缓存与版本隔离更新、主屏幕安装清单、统一图标与启动画面。
+- 本地分发 OFL 授权宋体子集；Canvas 绘制前加载，字体或入口模块加载失败可回退或重试。
 
-## 平台验收矩阵
+## 当前平台矩阵
 
-| 平台 | 工程与构建 | 安装运行 | 功能与生命周期 | 性能与真机 | 状态 |
-| --- | --- | --- | --- | --- | --- |
-| Web | Vite 生产构建通过 | 本机开发服务可运行 | 浏览器流程通过 | 真机浏览器、持续运行待验 | 开发中 |
-| iOS | Capacitor 工程与无签名模拟器构建通过 | iPhone 17 Pro / iOS 26.5 模拟器已安装运行 | 实际操作出牌、加注、后台恢复通过；原生 XCTest 师父面板与进程重启恢复 1 / 1 通过 | 用户有 iPhone，当前未连接；性能、音频待验 | 开发中 |
-| Android | Capacitor 工程、SDK 36 / JDK 21 构建通过 | API 36 模拟器安装运行通过 | App 原生自动化通过：行动、加注、Activity 重建恢复、摊牌复盘 | 用户有 Android 手机，当前未连接；性能、音频待验 | 开发中 |
-| macOS | Tauri Apple Silicon App 与 DMG 构建通过 | 本机启动和显示通过 | 恢复、加注、翻牌与师父面板已操作；最新窗口初始化调整的 GUI 复验待解锁 | 音频、持续运行与签名公证待验 | 开发中 |
-| Windows | Tauri x64 NSIS 构建通过 | Windows CI 中实际安装成功 | 原生加注、存档重载、摊牌、复盘、360px 窗口通过 | 用户电脑、音频、持续性能仍待验 | 开发中 |
+| 平台 | 工程与构建 | 实际运行和功能证据 | 仍待验收 |
+| --- | --- | --- | --- |
+| Web | Vite 生产构建通过 | Chromium 手机/窄屏/桌面、移动尺寸 WebKit；离线重载与恢复通过 | 手机浏览器安装至主屏幕、长时间离线、实际触控和性能 |
+| iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；师父面板、进程终止再启动恢复 XCTest 1 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
+| Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器，原生自动化覆盖行动、加注、Activity 重建、完整动画、摊牌复盘和师父面板 | 真机连接、系统杀进程恢复、音频、触控与持续性能 |
+| macOS | Tauri Apple Silicon App / DMG 可构建 | 本机已操作恢复、加注、翻牌、师父；最新窗口初始化的 GUI 复验待解锁 | 最新包窗口复验、音频、持续性能、签名公证 |
+| Windows | Tauri x64 NSIS 可构建 | Windows CI 实际安装并启动原生 App，通过加注、重载恢复、摊牌复盘和 360px 窗口测试 | 用户电脑实际运行、音频与持续性能 |
 
-## 后续共同功能
+用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件，等待用户在本机 Xcode 登录并连接设备。
 
-- [x] 新手到进阶九课、逐境解锁与进度恢复。
-- [ ] 使用真实决策场景的应用试炼与突破反馈。
-- [x] 师父兼容接口、请求白名单、程序事实计算、移动端面板、异常回退与本地凭据配置模板。
-- [ ] 国内模型真实联调、质量/延迟验收及服务端发布配置。
-- [ ] 各平台可靠存储、后台恢复、音频与窗口/触控适配。
-- [x] Web 离线缓存、版本隔离更新、主屏幕安装清单；Chromium / WebKit 断网重载与恢复测试通过。
-- [ ] 手机 Safari / Chrome 实际添加到主屏幕与长时间离线验证。
-- [x] 原创统一图标、原生启动画面与基础版本元数据（商店发布资料尚未制作）。
-- [ ] 可重复的构建脚本、跨平台 CI 和测试证据。
-- [ ] 目标设备上的持续运行、帧时间、内存和触控表现。
+## 最近验证
 
-## 验收规则
+上一版完整 CI：[39073060344](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39073060344)，Web、Android、iOS、macOS、Windows 五项任务全部成功。其中核心/师父服务 15 项，浏览器 34 项通过、2 项有意跳过，生产离线 2 项通过。iOS 包含原生 XCTest，Windows 包含 NSIS 安装后的实际原生运行，不是独立浏览器替代。
 
-每个平台至少记录构建命令、产物位置、实际运行环境、核心玩法、存档恢复、生命周期、音频与布局结果。签名发布、商店上架和真人设备验证分别标注，不以模拟器或浏览器测试替代其结论。
+该版本机原生回归：Android 1 项、iOS 1 项通过。报告与日志：
 
-## 本轮证据（2026-10-18）
+- `artifacts/android-final.log`
+- `artifacts/ios-final.log`、`artifacts/ios-native-1792273536679.xcresult`
+- `artifacts/windows-final-run/artifacts/windows-native/`（下载的 CI 原生截图与结果 JSON）
+- `artifacts/show-me-platforms.html`（实际 iOS 模拟器与 Windows CI 截图，明确标注环境）
 
-- `npm run test:e2e`：原生存储桥接加入后重新运行，24 / 24 通过。
-- `npm run test:android`：1 / 1 通过，模拟器 API 36，报告在 `android/app/build/reports/androidTests/connected/debug/`，日志 `artifacts/android-instrumentation.log`。这是 Activity 重建恢复，不冒充进程被系统杀死的验证。
-- `npm run build:ios`：无签名模拟器构建通过。模拟器截图 `artifacts/ios-native-playing.png`、`artifacts/ios-restored.png`。
-- `npm run build:desktop`：生成 Apple Silicon `.app` 与 `.dmg`，当前本地包没有开发者签名或公证。采用 [Tauri 后台节流配置](https://v2.tauri.app/reference/config/#windowconfig) 后，已实际复验：恢复存档继续到翻牌，动作和画面一致；截图 `artifacts/macos-native-playing.png`。
-- `artifacts/android-native-latest.png`：实际 Android 原生页面；通过 Capacitor 内置 SystemBars 配置固定深色背景的浅色图标，已重新构建、安装并查看截图确认对比度修复。
-- 原生测试构建曾因并行同步目录冲突失败；已加入构建锁。随后根 Gradle 测试任务误运行依赖库旧测试，出现 Kotlin 冲突；改为 `:app:connectedDebugAndroidTest` 后通过。没有把失败尝试计为通过。
+### 本轮：音频生命周期
 
-## 可重复构建
+关闭音效、页面隐藏或收到原生后台事件时，取消已排期的音符并暂停音频上下文；显式继续后再恢复。快速开启后立即关闭也会取消仍在等待恢复的预览，避免悬挂请求；再次开启可正常播放。销毁场景关闭上下文并移除监听。禁用 Phaser 未使用的音频管理器，避免额外创建音频上下文。
+
+新增浏览器测试使用真实 Web Audio 对象而非假音频引擎，覆盖按需创建、模拟原生后台事件、手动恢复、取消和弦、销毁与关闭后不再创建，四种配置共 8 项通过。这里验证的是浏览器资源状态，不能替代手机扬声器、静音模式、来电或蓝牙验证。API 语义见 [MDN AudioContext.suspend](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/suspend)。
+
+本轮生产构建、15 项核心/服务测试、服务端类型检查通过；浏览器 42 项通过、2 项重复进阶场景按项目主动跳过。Android 原生测试 1 项、iOS XCTest 1 项、生产离线 2 项通过，macOS App / DMG 重建通过。日志为 `artifacts/audio-e2e-final.log`、`artifacts/android-audio-final.log`、`artifacts/ios-audio-final.log`、`artifacts/macos-audio-final.log`、`artifacts/offline-audio-final.log`；iOS 报告为 `artifacts/ios-native-1792275303160.xcresult`。本轮 Windows 及云端回归待 CI。
+
+中途构建目录和报告目录曾因并发清理失败，已改为独立测试轮次及串行原生构建，不将失败或中断轮次计为通过。快速开关专项测试发现浏览器恢复请求可能悬挂，已补齐取消处理并回归。
+
+## 可重复执行
 
 ```sh
 npm ci
 npm run test:unit
+npm run check:server
 npm run test:e2e
-npm run build:android      # Android SDK 36 + JDK 21
-npm run test:android       # 只对模拟器执行隔离的 App 测试
-npm run build:ios          # macOS + Xcode 26，模拟器 App
-npm run build:ios-device   # 未签名真机 App，安装前还需要开发者签名
-npm run build:desktop      # macOS: App/DMG；Windows: NSIS 安装程序
+npm run test:offline
+npm run build:android
+npm run test:android       # 隔离测试仅对模拟器执行
+npm run build:ios
+npm run test:ios
+npm run build:ios-device   # 未签名；还不能直接安装
+APPLE_TEAM_ID=你的团队ID npm run build:ios-signed
+npm run build:desktop     # macOS App/DMG；Windows NSIS
 ```
 
-Android 调试包：`artifacts/packages/wendao-android-debug.apk`。iOS 模拟器包：`artifacts/ios/Build/Products/Debug-iphonesimulator/App.app`。macOS 安装包：`src-tauri/target/release/bundle/dmg/`。
+平台脚本在共享 Web 构建、原生同步和原生构建期间持有构建锁，避免资源被并发覆盖。CI 各平台使用独立任务。Android 脚本只测试本应用，避免误运行依赖库的旧测试。测试构建强制禁用远程师父地址，不调用可能计费的模型。
 
-平台脚本串行持有构建锁，避免共享 Web 资源在原生构建期间被覆盖。CI 为 Web、Android、iOS 和两种桌面系统分别提供隔离任务，安装包构建结果不能代替平台运行测试。
+产物位置：Android `artifacts/packages/wendao-android-debug.apk`；iOS 模拟器 `artifacts/ios/Build/Products/Debug-iphonesimulator/App.app`；macOS `src-tauri/target/release/bundle/dmg/`；Windows 为 CI `desktop-windows-latest` 附件中的 NSIS 安装程序。CI 附件有保留期限，不等同正式发布。
 
-## 真机交接
+Windows 测试采用安装后启动 App、测试进程显式启用本机端口、EdgeDriver attach 的方式；正常启动不启用调试端口。早期 WebView2 会话失败已解决，失败运行仍保留在 CI 历史中。macOS 最新窗口初始化已构建，GUI 复验因界面工具报告锁屏而尚未完成。
 
-用户已确认有 iPhone、Android 手机和 Windows 电脑。尚未连接或执行，三项真机结果均为待验。Android 可先安装调试 APK；iPhone 需要在本机 Xcode 选择开发团队、信任设备并完成签名；Windows 待 CI 产生安装程序后验证。不要在聊天或仓库里保存私钥、口令或签名证书。
+## 剩余交付条件
 
-每台设备验收：记录型号与系统版本 → 安装与冷启动 → 完整玩三手（包含弃牌、加注、摊牌、复盘）→ 切后台后返回 → 结束进程后重启 → 检查手牌、灵石与课程进度 → 加注输入键盘与安全区 → 音效、静音与来电恢复 → 持续运行及帧时间/内存测量。只有实际执行后才填写结果。
+- 国内模型真实联调：提供服务 Base URL、模型名，在本机 `.env` 配置密钥；具体步骤见 `docs/AI.md`。目前仅验证兼容接口和模拟响应，未验证实际模型质量或延迟。
+- 公网师父服务：账号鉴权、配额、持久限流、HTTPS、发布环境和相应隐私披露。当前服务是本机开发网关。
+- 教学扩展：将课程知识应用到指定决策场景的试炼与突破反馈，当前不把普通测验表述成场景试炼。
+- 真机与用户电脑验收、商店资料及签名发布；用户尚未要求实际提交商店或正式发布。
+- 各平台音频、持续帧时间与内存、触控延迟。60 FPS 是目标，尚无真机测量结论。`web-perf` 技能要求的 Chrome DevTools MCP 未配置，专项性能审计未执行。
 
-当前持续目标保持进行中。设备连接、签名与模型凭据尚未具备时，继续完成可自主推进的开发，并记录依赖项。
-
-新增验证：九课逐境解锁及满境恢复在 Chromium / WebKit 移动尺寸通过；生产版离线冷加载、手牌/灵石恢复、离线答题 2 / 2 通过。CI 首轮 Web 出现一次等待动画超过测试默认 5 秒（状态仍在正常推进），已将这项等待改为 15 秒，待 CI 复验；Windows PATH 大小写修复也待 CI 复验。
-
-
-## 最新增量
-
-- [五个平台 CI 全通过](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39063409844)：包含九课与离线版，Web、Android、iOS、macOS、Windows 的构建/相应测试均通过。Windows 安装程序在本地 `artifacts/packages/windows/nsis/问道牌途_0.2.0_x64-setup.exe`，以及该次 CI 的 `desktop-windows-latest` 附件。这不表示用户 Windows 电脑运行验收已通过。
-- 新增师父浏览器测试：规则事实、模拟模型文本、HTML 安全呈现、失败回退与保留同一牌局，在四种浏览器尺寸/引擎通过。实际真实模型尚未配置，模拟响应不作为模型能力证据。
-- 13 / 13 核心与师父 HTTP 服务测试通过；服务端类型检查通过。说明见 `docs/AI.md`。
-- 新增 `npm run build:ios-signed`，需要 `APPLE_TEAM_ID`。本机已发现开发签名证书，但签名实际尝试失败：Xcode `No Accounts` 与缺少本应用描述文件。已请用户在 Xcode 登录开发者账号并连接 iPhone，保留为待验。
-- Android 共享前端加入师父后，原生测试重新运行通过；进一步加入完整动画与师父面板断言后，原生测试再次通过（1 / 1）。
-
-- 最新本机验证：核心与服务 13 / 13、浏览器 30 通过 / 2 个按项目跳过、生产离线 2 / 2、Android 原生完整动画与师父断言 1 / 1；依赖 audit 已修复构建工具的旧 UUID 依赖，官方 registry 审计为 0 已知漏洞。
-- Windows 新增 NSIS 静默安装与 Tauri WebDriver 原生运行验证脚本，覆盖加注、存档重载、摊牌、复盘和窄窗口，并保留截图；当前仅完成脚本与语法检查，等待 Windows CI 实际运行，不计为通过。使用 [Tauri 官方 WebDriver 方案](https://v2.tauri.app/develop/tests/webdriver/ci/)。
-
-
-- iOS 新增共享 App scheme 与 PracticeUITests 原生测试目标。`npm run test:ios` 已在 iPhone 17 Pro / iOS 26.5 模拟器通过（1 / 1）：师父面板、原生本地回退、终止并重新启动进程后恢复同一手牌。报告 `artifacts/ios-native-1792271281989.xcresult`，导出截图在 `artifacts/ios-native-attachments/`。这仍不代替真机结果。
-- 中文宋体统一为本地分发的开源 Noto Serif SC 派生子集，750 个映射字符，291,304 字节；保留 OFL 授权，源版本和重新生成步骤见 `public/fonts/README.md`。Canvas 绘制前加载字体，下载失败可使用系统回退。四种浏览器场景确认字体实际加载，新增资源/字体失败重试测试 4 / 4 通过。
-- macOS 新包已重新启动并实际验证师父面板、价格计算与未配置服务时的本地回退；截图 `artifacts/macos-native-mentor.png`。
-- Windows NSIS 安装已在 CI 成功，WebView2 创建会话失败。日志出现上游报告的 DevToolsActivePort 问题，参见 [runner-images #14738](https://github.com/actions/runner-images/issues/14738)。正在按微软支持的 attach 方式适配测试进程，运行测试未通过前保持待验，不跳过失败断言。
-
-- 桌面窗口初始化调整以支持仅测试进程显式启用本机调试端口；macOS 编译与 DMG 构建通过。随后界面工具报告 Mac 锁屏，无法继续 GUI 复验，已请用户手动解锁，此次窗口调整的 macOS 运行复验保持待办。正常启动未配置测试环境变量时不启用调试端口。
-
-
-## 当前里程碑
-
-- [跨平台 CI（含 iOS / Windows 原生运行）全部通过](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39070519242)。Windows 真实运行的是 NSIS 安装后的 `app.exe`，不是独立浏览器；执行加注、存档重载、摊牌、复盘与 360px 窗口检查，结果 JSON 与截图保存在 CI `desktop-windows-latest` 附件的 `artifacts/windows-native/`。用户自己的 Windows 电脑验收仍待完成。
-- Windows 上游启动问题采用安装程序先启动、测试进程显式启用本机端口、EdgeDriver attach 的方案解决；正常启动不启用测试调试端口。原生运行通过前的失败尝试全部保留为失败证据。
-- 最新本地存档加固：按个人账本校验、重算完整结算并校验底池/牌型。损坏的复盘结果被拒绝；旧版弃牌单底池记录可迁移，保留原手牌与灵石。弃牌胜利时将未获跟注的投入单独标为返还。15 项核心/服务测试与四种浏览器的损坏存档场景通过；该增量的最终全平台 CI 已通过，见下方最终功能提交。
-- `web-perf` 指定的 Chrome DevTools MCP 当前未配置，未采集专项 Core Web Vitals / 帧时间指标。FPS 目标、真机音效、触控延迟与持续运行仍未验收，不用构建成功或模拟器代替。
-
-
-## 最终功能提交的回归（4f28fdc）
-
-[完整 CI](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39072155136)：Web、Android、iOS、macOS、Windows 五项任务全部成功。核心与师父服务测试 15 项，浏览器场景 34 项通过、2 项按项目主动跳过，生产离线 2 项通过。iOS 的 CI 包含原生 XCTest；Windows 包含 NSIS 安装后的原生运行测试。
-
-本机最后串行回归：Android 完整动画/加注/Activity 恢复/复盘/师父面板 1 项通过；iOS 师父与进程重启恢复 1 项通过（`artifacts/ios-native-1792273536679.xcresult`）；生产版离线恢复 2 项通过。日志为 `artifacts/android-final.log`、`artifacts/ios-final.log`、`artifacts/offline-final.log`。
-
-剩余验收：解锁 Mac 后复验最新桌面窗口初始化；连接 iPhone / Android 真机并完成 Xcode 账号与签名；用户 Windows 电脑运行；真机触控、音效、持续帧时间与内存；国内模型真实联调；正式服务鉴权、配额与发布配置。专项性能工具当前未配置，未提供或承诺实测 60 FPS。持续目标保持进行中。
+真机步骤：记录型号和系统 → 安装、冷启动 → 玩三手（弃牌、加注、摊牌和复盘）→ 切后台再返回 → 结束进程再启动 → 核对手牌、灵石和课程进度 → 检查键盘、安全区和触控 → 音效、静音、来电恢复 → 持续帧时间和内存测量。每一项只在实际完成后填写结果。

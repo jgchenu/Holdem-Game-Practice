@@ -172,6 +172,7 @@ export class TableScene extends Phaser.Scene {
       if (object instanceof Phaser.GameObjects.Text) object.setResolution(2);
     });
     this.game.events.on(Phaser.Core.Events.VISIBLE, this.clearSamples, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.feedback.dispose());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
       this.game.events.off(Phaser.Core.Events.VISIBLE, this.clearSamples, this),
     );

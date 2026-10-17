@@ -170,6 +170,7 @@ export class LiveScene extends Phaser.Scene {
       this,
     );
     this.scale.on(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.feedback.dispose());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
       this.game.events.off(

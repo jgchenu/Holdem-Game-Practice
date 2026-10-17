@@ -111,6 +111,7 @@ const game = new Phaser.Game({
   height: 1100,
   transparent: true,
   antialias: true,
+  audio: { noAudio: true },
   powerPreference: "low-power",
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   fps: { target: 60, forceSetTimeOut: false },
@@ -155,13 +156,12 @@ function persistPreferences() {
 sound.addEventListener("click", () => {
   preferences.sound = !preferences.sound;
   persistPreferences();
-  scene.feedback.unlock();
-  scene.feedback.play("card");
+  void scene.feedback.preview("card");
 });
 soundToggle.addEventListener("change", () => {
   preferences.sound = soundToggle.checked;
   persistPreferences();
-  scene.feedback.unlock();
+  void scene.feedback.preview("card");
 });
 motionToggle.addEventListener("change", () => {
   preferences.reducedMotion = motionToggle.checked;
