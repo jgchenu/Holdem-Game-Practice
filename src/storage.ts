@@ -4,6 +4,7 @@ const keys = [
   "wendao:preferences:v1",
   "wendao:practice:v1",
   "wendao:learning:v1",
+  "wendao:trials:v1",
 ];
 const memory = new Map<string, string>();
 let nativeStore:

@@ -57,6 +57,8 @@ public class PracticeInstrumentedTest {
         context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).edit()
             .putString("wendao:practice:v1", "null")
             .putString("wendao:preferences:v1", "{\"sound\":false,\"reducedMotion\":true,\"quality\":\"balanced\"}")
+            .putString("wendao:learning:v1", "[\"ranks\",\"actions\",\"position\"]")
+            .putString("wendao:trials:v1", "[]")
             .commit();
         launch();
         try {
@@ -68,12 +70,22 @@ public class PracticeInstrumentedTest {
             String before = js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent})");
             assertNotNull(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:practice:v1", null));
 
+            js("document.querySelector('#study').click();document.querySelector('[data-trial=free-check]').click()");
+            until("document.querySelector('#trial-call')");
+            js("document.querySelector('#trial-call').click()");
+            until("document.querySelector('#trial-feedback').classList.contains('passed') && !document.querySelector('#trial-done').disabled");
+            assertTrue(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:trials:v1", "").contains("free-check"));
+            js("document.querySelector('#study-dialog').close()");
+
             instrumentation.runOnMainSync(() -> activity.finish());
             instrumentation.waitForIdleSync();
             launch();
             idle();
             until("document.querySelector('#resume') && !document.querySelector('#resume').hidden");
             assertEquals(before, js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent})"));
+            js("document.querySelector('#study').click()");
+            until("document.querySelector('[data-trial=free-check]').textContent.includes('已达成')");
+            js("document.querySelector('#study-dialog').close()");
             js("document.querySelector('#resume').click()"); idle();
             js("document.querySelector('#raise').click()");
             until("document.querySelector('#raise-dialog').open");

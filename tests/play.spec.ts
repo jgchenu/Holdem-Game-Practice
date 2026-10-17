@@ -159,6 +159,7 @@ test("三项修炼、答错重试、进度保存与短屏操作区可见", async
   await page.locator("#study").click();
   await expect(page.locator('[data-lesson="3"]')).toBeDisabled();
   await expect(page.locator('[data-lesson="6"]')).toBeDisabled();
+  await expect(page.locator('[data-trial="free-check"]')).toBeDisabled();
   for (const [index, answers] of [
     [0, [1, 2]],
     [1, [0, 1]],
@@ -176,6 +177,8 @@ test("三项修炼、答错重试、进度保存与短屏操作区可见", async
     }
   }
   await expect(page.locator("#study-dialog")).toContainText("筑基 · 入门");
+  await expect(page.locator('[data-trial="free-check"]')).toBeEnabled();
+  await expect(page.locator('[data-trial="min-raise"]')).toBeDisabled();
   await page.getByRole("button", { name: "关闭修炼" }).click();
   await expect(page.locator("#progress")).toHaveText("3/9");
   await page.reload();

@@ -43,3 +43,28 @@ test("生产版断网冷加载、继续牌局与离线课程", async ({ page, co
   expect(paths.some((path) => path.includes("/api/"))).toBeFalsy();
   await context.setOffline(false);
 });
+
+test('试炼离线可操作，完成印记断网重载后保留', async ({ page, context }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('wendao:learning:v1')) localStorage.setItem('wendao:learning:v1', '["ranks","actions","position"]');
+  });
+  await page.goto('/');
+  await expect(page.locator('#start')).toBeEnabled();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBeTruthy();
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('#start')).toBeEnabled();
+  await page.locator('#study').click();
+  await page.locator('[data-trial="free-check"]').click();
+  await page.locator('#trial-call').click();
+  await expect(page.locator('#trial-feedback')).toContainText('试炼达成');
+  await page.locator('#trial-done').click();
+  await expect(page.locator('.trial-progress')).toHaveText('问心试炼 1 / 3');
+  await page.reload();
+  await expect(page.locator('#start')).toBeEnabled();
+  await page.locator('#study').click();
+  await expect(page.locator('[data-trial="free-check"]')).toContainText('已达成');
+  await expect(page.locator('.trial-progress')).toHaveText('问心试炼 1 / 3');
+  await context.setOffline(false);
+});

@@ -43,4 +43,47 @@ final class PracticeUITests: XCTestCase {
         restored.lifetime = .keepAlways
         add(restored)
     }
+
+    func testNativeTrialProgressSurvivesRelaunch() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")
+        app.launch()
+        XCTAssertTrue(button(app, containing: "进入修炼阁").waitForExistence(timeout: 20))
+        button(app, containing: "进入修炼阁").tap()
+        let courses: [(String, [String])] = [
+            ("识牌 · 七选五", ["一对", "平分底池"]),
+            ("知进退 · 正确行动", ["过牌", "40"]),
+            ("观位 · 后发先知", ["大盲位左侧第一位", "能先看到更多人的行动"])
+        ]
+        for (title, answers) in courses {
+            let lesson = button(app, containing: title)
+            XCTAssertTrue(lesson.waitForExistence(timeout: 10))
+            if !lesson.isHittable { app.swipeUp() }
+            lesson.tap()
+            for (index, answer) in answers.enumerated() {
+                button(app, containing: answer).tap()
+                app.buttons[index == 0 ? "下一道课程练习" : "保存本课进度"].tap()
+            }
+        }
+        let trial = button(app, containing: "静观 · 免费过牌")
+        if !trial.isHittable { app.swipeUp() }
+        XCTAssertTrue(trial.isEnabled)
+        trial.tap()
+        XCTAssertTrue(app.buttons["试炼过牌"].waitForExistence(timeout: 10))
+        if !app.buttons["试炼过牌"].isHittable { app.swipeUp() }
+        app.buttons["试炼过牌"].tap()
+        XCTAssertTrue(app.staticTexts["试炼达成"].waitForExistence(timeout: 10))
+        let evidence = XCTAttachment(screenshot: app.screenshot())
+        evidence.name = "ios-native-trial"
+        evidence.lifetime = .keepAlways
+        add(evidence)
+        app.buttons["收起试炼"].tap()
+        XCTAssertTrue(button(app, containing: "静观 · 免费过牌").label.contains("已达成"))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(button(app, containing: "进入修炼阁").waitForExistence(timeout: 20))
+        button(app, containing: "进入修炼阁").tap()
+        XCTAssertTrue(button(app, containing: "静观 · 免费过牌").waitForExistence(timeout: 10))
+        XCTAssertTrue(button(app, containing: "静观 · 免费过牌").label.contains("已达成"), "Native process relaunch must hydrate the trial seal from Preferences")
+    }
 }

@@ -1,4 +1,5 @@
 import { readStorage, writeStorage } from "./storage";
+import { trials, type TrialId } from "./trials";
 export const lessons = [
   {
     id: "ranks",
@@ -228,6 +229,21 @@ export function saveLearning(ids: string[]): boolean {
   } catch {
     return false;
   }
+}
+
+export function isTrialUnlocked(id: TrialId, completed: readonly string[]): boolean {
+  const trial = trials.find(t => t.id === id)!;
+  return lessons.filter(l => l.stage === trial.stage).every(l => completed.includes(l.id));
+}
+export function loadTrials(): TrialId[] {
+  try {
+    const saved: unknown = JSON.parse(readStorage('wendao:trials:v1') || '[]');
+    return Array.isArray(saved)
+      ? [...new Set(saved.filter((id): id is TrialId => trials.some(t => t.id === id)))] : [];
+  } catch { return []; }
+}
+export function saveTrials(ids: readonly TrialId[]): boolean {
+  return writeStorage('wendao:trials:v1', JSON.stringify([...new Set(ids)]));
 }
 
 export const learningStages = [

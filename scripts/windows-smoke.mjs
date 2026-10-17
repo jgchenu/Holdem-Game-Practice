@@ -152,7 +152,7 @@ try {
   );
   // The CI machine has an isolated user profile. These are test fixtures, never a user's save.
   await execute(
-    "localStorage.setItem('wendao:preferences:v1',JSON.stringify({sound:false,reducedMotion:true,quality:'balanced'}));localStorage.removeItem('wendao:practice:v1');",
+    "localStorage.setItem('wendao:preferences:v1',JSON.stringify({sound:false,reducedMotion:true,quality:'balanced'}));localStorage.removeItem('wendao:practice:v1');localStorage.setItem('wendao:learning:v1','[\"ranks\",\"actions\",\"position\"]');localStorage.removeItem('wendao:trials:v1');",
   );
   await command(`/session/${session}/refresh`, {});
   await until(
@@ -240,6 +240,19 @@ try {
     true,
   );
   await screenshot("narrow-window");
+  const trialBefore = await execute("return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent}");
+  await click("#study");
+  await click('[data-trial="free-check"]');
+  await click("#trial-call");
+  await until(() => execute("return document.querySelector('#trial-feedback')?.classList.contains('passed') && !document.querySelector('#trial-done').disabled"), "trial earns its seal");
+  await screenshot("trial");
+  await click("#trial-done");
+  await click("#study-dialog .close-button");
+  await command(`/session/${session}/refresh`, {});
+  await idle();
+  assert.deepEqual(await execute("return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent}"), trialBefore);
+  await click("#study");
+  await until(() => execute("return document.querySelector('[data-trial=free-check]')?.textContent.includes('已达成')"), "trial seal survives native reload");
   writeFileSync(
     join(output, "result.json"),
     JSON.stringify(
@@ -254,6 +267,9 @@ try {
           "showdown",
           "public action review",
           "360px layout",
+          "trial operation",
+          "trial seal persistence",
+          "trial wallet isolation",
         ],
         passed: true,
       },

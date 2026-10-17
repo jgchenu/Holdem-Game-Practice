@@ -18,7 +18,12 @@ import {
   isLessonUnlocked,
   loadLearning,
   saveLearning,
+  isTrialUnlocked,
+  loadTrials,
+  saveTrials,
 } from "./learning";
+import { trials } from "./trials";
+import { openTrialPanel } from "./trial-panel";
 import { guidance } from "./coach";
 import { createMentorPanel } from "./mentor-panel";
 import "./play.css";
@@ -35,7 +40,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="layout play-layout"><aside class="intro"><div class="seal large">问道</div><p class="eyebrow">THE PATH WITHIN</p><h1>方寸之间<br/>自有乾坤</h1><div class="gold-line"></div><p class="intro-copy">从一手牌，走向一场修行。<br/>静心，观势，悟道。</p><div class="edition"><span>壹</span><div>云隐修炼<small>单人练习 · 移动端优先</small></div></div></aside>
   <main class="game-shell play-shell" aria-label="云隐宗练习桌">
     <header class="topbar"><a class="brand" href="/" aria-label="问道牌途"><span class="seal">道</span><span>问道牌途<small>WENDAO POKER</small></span></a><div class="header-actions"><button id="pause" class="pause-button" disabled>暂停</button><button id="sound" class="icon-button" aria-label="开启音效" aria-pressed="false">${icons.sound}<span class="mute-line"></span></button><button id="settings" class="icon-button" aria-label="体验设置">${icons.settings}</button></div></header>
-    <section class="chapter"><div><span class="chapter-mark">壹</span><span>云隐山<small>盲注 10 / 20</small></span></div><button id="study" class="study-link">修炼 <span id="progress">0/${lessons.length}</span> ›</button></section>
+    <section class="chapter"><div><span class="chapter-mark">壹</span><span>云隐山<small>盲注 10 / 20</small></span></div><button id="study" class="study-link" aria-label="打开修炼阁">修炼 <span id="progress">0/${lessons.length}</span> ›</button></section>
     <div class="live-status"><span id="stage-label">静心 · 入席</span><span id="hand-number">单人练习</span></div>
     <section class="live-table-wrap"><div id="live-table" role="img" aria-label="六人牌桌，尚未发牌"></div><div id="loading" role="status">正在铺开牌席…</div><button id="inspect" class="look-button" disabled aria-label="抬起或放下手牌">观牌</button></section>
     <section class="play-dock" aria-label="牌局操作">
@@ -79,6 +84,7 @@ let savedOK = !saved.corrupt && storageHealthy(),
   opener: HTMLElement | null = null,
   notice = "";
 let learned = loadLearning();
+let completedTrials = loadTrials();
 const scene = new LiveScene(prefs, {
   ready: () => {
     void initialize();
@@ -482,8 +488,29 @@ let lessonIndex: number | null = null,
   answered = false;
 function lessonList() {
   lessonIndex = null;
-  get("study-body").innerHTML =
-    `<p class="study-intro">每次练一点，先看懂，再上桌。完成当前境界三课，开启下一境。</p><div class="realm-progress"><span>${learningRealm(learned)}</span><span>${learned.length} / ${lessons.length}</span></div>${learningStages.map((stage, n) => `<section class="learning-stage"><h3 class="section-label">${stage.title}<small>${stage.detail}</small></h3>${lessons.map((lesson, i) => (lesson.stage !== n ? "" : `<button class="lesson-card" data-lesson="${i}" ${isLessonUnlocked(i, learned) ? "" : "disabled"}><span class="lesson-number">${["壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"][i]}</span><span><strong>${lesson.title}</strong><small>${lesson.subtitle} · ${lesson.questions.length} 道练习</small></span><span class="lesson-status">${learned.includes(lesson.id) ? "已完成 ✓" : isLessonUnlocked(i, learned) ? "修炼 →" : "待突破"}</span></button>`)).join("")}</section>`).join("")}<p class="dialog-footnote">境界只表示本设备的课程进度。练习使用预设讲解，不是对实战能力的评级。</p>`;
+  const sections = learningStages.map((stage, n) => {
+    const cards = lessons.map((lesson, i) => lesson.stage !== n ? "" : `
+      <button class="lesson-card" data-lesson="${i}" ${isLessonUnlocked(i, learned) ? "" : "disabled"}>
+        <span class="lesson-number">${["壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"][i]}</span>
+        <span><strong>${lesson.title}</strong><small>${lesson.subtitle} · ${lesson.questions.length} 道练习</small></span>
+        <span class="lesson-status">${learned.includes(lesson.id) ? "已完成 ✓" : isLessonUnlocked(i, learned) ? "修炼 →" : "待突破"}</span>
+      </button>`).join("");
+    const checkpoint = trials.filter(t => t.stage === n).map(t => {
+      const unlocked = isTrialUnlocked(t.id, learned), passed = completedTrials.includes(t.id);
+      return `<button class="trial-entry" data-trial="${t.id}" ${unlocked ? "" : "disabled"}>
+        <span class="trial-entry-mark">${passed ? "悟" : "试"}</span>
+        <span><strong>${t.title}</strong><small>${unlocked ? t.subtitle : "完成本境三课后开放"}</small></span>
+        <span>${passed ? "已达成 ✓" : "入境 →"}</span>
+      </button>`;
+    }).join("");
+    return `<section class="learning-stage"><h3 class="section-label">${stage.title}<small>${stage.detail}</small></h3>${cards}${checkpoint}</section>`;
+  }).join("");
+  get("study-body").innerHTML = `
+    <p class="study-intro">每次练一点，先看懂，再上桌。完成当前境界三课，开启下一境。</p>
+    <div class="realm-progress"><span>${learningRealm(learned)}</span><span>${learned.length} / ${lessons.length}</span></div>
+    ${sections}<p class="trial-progress">问心试炼 ${completedTrials.length} / ${trials.length}</p>
+    <p class="dialog-footnote">境界只表示本设备的课程进度。预设试炼独立于练习桌，不作为实战能力评级。</p>`;
+  bindTrials();
   get("study-body")
     .querySelectorAll<HTMLButtonElement>("[data-lesson]")
     .forEach((el) =>
@@ -495,12 +522,32 @@ function lessonList() {
       }),
     );
 }
+function bindTrials() {
+  get("study-body").querySelectorAll<HTMLButtonElement>("[data-trial]").forEach(el => {
+    el.addEventListener("click", () => {
+      const trial = trials.find(t => t.id === el.dataset.trial);
+      if (!trial || !isTrialUnlocked(trial.id, learned)) return;
+      const backToTrial = () => {
+        lessonList();
+        const entry = get("study-body").querySelector<HTMLButtonElement>(`[data-trial="${trial.id}"]`)!;
+        entry.focus({ preventScroll: true });
+        entry.scrollIntoView({ block: "center" });
+      };
+      openTrialPanel(get("study-body"), trial.id, backToTrial, async id => {
+        if (!completedTrials.includes(id)) completedTrials.push(id);
+        const ok = saveTrials(completedTrials);
+        await flushStorage();
+        return ok && storageHealthy();
+      });
+    });
+  });
+}
 function renderQuestion() {
   const lesson = lessons[lessonIndex!],
     question = lesson.questions[questionIndex];
   answered = false;
   get("study-body").innerHTML =
-    `<button id="lesson-back" class="text-button">← 返回修炼阁</button><p class="quiz-count">${lesson.title} · ${questionIndex + 1} / ${lesson.questions.length}</p><h3 class="quiz-prompt">${question.prompt}</h3><div class="quiz-options">${question.choices.map((choice, i) => `<button data-answer="${i}"><span>${["甲", "乙", "丙"][i]}</span>${choice}</button>`).join("")}</div><p id="quiz-feedback" class="quiz-feedback" role="status"></p><button id="quiz-next" class="primary-button sheet-confirm" hidden>${questionIndex < lesson.questions.length - 1 ? "继续修炼 →" : "完成修炼 ✓"}</button>`;
+    `<button id="lesson-back" class="text-button">← 返回修炼阁</button><p class="quiz-count">${lesson.title} · ${questionIndex + 1} / ${lesson.questions.length}</p><h3 class="quiz-prompt">${question.prompt}</h3><div class="quiz-options">${question.choices.map((choice, i) => `<button data-answer="${i}"><span>${["甲", "乙", "丙"][i]}</span>${choice}</button>`).join("")}</div><p id="quiz-feedback" class="quiz-feedback" role="status"></p><button id="quiz-next" class="primary-button sheet-confirm" aria-label="${questionIndex < lesson.questions.length - 1 ? "下一道课程练习" : "保存本课进度"}" hidden>${questionIndex < lesson.questions.length - 1 ? "继续修炼 →" : "完成修炼 ✓"}</button>`;
   button("lesson-back").addEventListener("click", lessonList);
   get("study-body")
     .querySelectorAll<HTMLButtonElement>("[data-answer]")
