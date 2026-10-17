@@ -39,6 +39,7 @@ test('三境试炼操作、非法加注、分池和独立进度恢复，保持�
   await expect(page.locator('#trial-feedback')).toContainText('试炼达成');
   await page.locator('#trial-done').click();
 
+  if (info.project.name !== 'desktop') await page.setViewportSize({ width: 320, height: 568 });
   await page.locator('[data-trial="short-call"]').click();
   expect(await page.locator('#study-dialog').evaluate(el => el.scrollTop)).toBe(0);
   await expect(page.locator('#trial-call')).toHaveText('跟注 80 · 全下');
@@ -48,8 +49,7 @@ test('三境试炼操作、非法加注、分池和独立进度恢复，保持�
   await expect(page.locator('[aria-label="摊牌底牌"]')).toHaveCount(2);
   await page.screenshot({ path: `artifacts/trial-pots-${info.project.name}.png` });
   if (info.project.name !== 'desktop') {
-    await page.setViewportSize({ width: 320, height: 568 });
-    await page.locator('#trial-done').scrollIntoViewIfNeeded();
+    await expect(page.locator('#trial-done')).toBeEnabled();
     const done = await page.locator('#trial-done').boundingBox();
     expect(done!.height).toBeGreaterThanOrEqual(44);
     expect(done!.y + done!.height).toBeLessThanOrEqual(568);

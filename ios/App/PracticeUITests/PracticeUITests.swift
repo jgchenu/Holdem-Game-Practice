@@ -73,6 +73,7 @@ final class PracticeUITests: XCTestCase {
         if !app.buttons["试炼过牌"].isHittable { app.swipeUp() }
         app.buttons["试炼过牌"].tap()
         XCTAssertTrue(app.staticTexts["试炼达成"].waitForExistence(timeout: 10))
+        XCTAssertLessThanOrEqual(app.buttons["收起试炼"].frame.maxY, app.frame.maxY - 24, "Completion controls must be visible above the bottom safe area without another swipe")
         let evidence = XCTAttachment(screenshot: app.screenshot())
         evidence.name = "ios-native-trial"
         evidence.lifetime = .keepAlways

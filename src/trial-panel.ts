@@ -38,6 +38,12 @@ export function openTrialPanel(host: HTMLElement, id: TrialId, back: () => void,
       if (amount) void submit({ type: 'raise', to: amount.valueAsNumber });
     });
   }
+  function revealResultControls() {
+    const dialog = host.closest('dialog');
+    // Scroll to the content end so the sheet's safe-area padding stays below the buttons.
+    if (dialog) dialog.scrollTop = dialog.scrollHeight;
+    else host.querySelector('.trial-result-actions')?.scrollIntoView({ block: 'end' });
+  }
   async function submit(action: Action) {
     if (saving || run.attempted) return;
     try { run = attemptTrial(run, action); }
@@ -55,7 +61,7 @@ export function openTrialPanel(host: HTMLElement, id: TrialId, back: () => void,
     buttons.forEach(button => { button.disabled = true; });
     feedback.tabIndex = -1;
     feedback.focus({ preventScroll: true });
-    feedback.scrollIntoView({ block: 'nearest' });
+    revealResultControls();
     if (run.passed) {
       const ok = await award(id);
       // Closing or changing the panel during a native storage flush must not update a new view.
@@ -63,6 +69,7 @@ export function openTrialPanel(host: HTMLElement, id: TrialId, back: () => void,
         const note = document.createElement('p'); note.className = 'input-error';
         note.textContent = '本次达成仍可查看，进度保存失败。请稍后重试。';
         feedback.append(note);
+        revealResultControls();
       }
     }
     saving = false;

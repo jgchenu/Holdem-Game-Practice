@@ -20,7 +20,7 @@
 | iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；师父面板、试炼和进程终止再启动恢复 XCTest 2 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
 | Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器，原生自动化覆盖行动、加注、Activity 重建、完整动画、摊牌复盘、师父与试炼印记恢复 | 真机连接、系统杀进程恢复、音频、触控与持续性能 |
 | macOS | Tauri Apple Silicon App / DMG 可构建 | 本机已操作恢复、加注、翻牌、师父；最新窗口初始化的 GUI 复验待解锁 | 最新包窗口复验、音频、持续性能、签名公证 |
-| Windows | Tauri x64 NSIS 可构建 | Windows CI 实际安装并启动原生 App，通过加注、重载恢复、摊牌复盘和 360px 窗口测试 | 用户电脑实际运行、音频与持续性能 |
+| Windows | Tauri x64 NSIS 可构建 | Windows CI 实际安装并启动原生 App，通过加注、重载恢复、摊牌复盘、360px 窗口和试炼印记测试 | 用户电脑实际运行、音频与持续性能 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件，等待用户在本机 Xcode 登录并连接设备。
 
@@ -52,11 +52,13 @@
 
 试炼完成印记单独保存，原生 Preferences 初始化包含新存储键。进入试炼从顶部任务开始，结算反馈获得焦点，返回后定位到对应入口。牌面、纸质卡片、墨青桌面和「悟」印记保持原有视觉方向；减少动态效果时取消入场动画。
 
-当前验证：核心与服务 19 项通过；浏览器整轮 46 项通过、2 项有意跳过；随后焦点与滚动调整的四种浏览器试炼回归 4 项通过。Android 原生 1 项、iOS XCTest 2 项通过；Android 验证 Preferences 写入及 Activity 重建后恢复，iOS 通过实际点击课程/试炼并终止进程后重启恢复。首次 iOS 新用例因匹配了被学习进度覆盖的初始标签失败，已根据实际可访问树修正并重跑通过。
+当前验证：核心与服务 19 项通过；浏览器整轮 46 项通过、2 项有意跳过；随后焦点与完成区安全区调整的四种浏览器试炼回归 4 项通过。Android 原生 1 项、iOS XCTest 2 项通过；Android 验证 Preferences 写入及 Activity 重建后恢复，iOS 通过实际点击课程/试炼并终止进程后重启恢复。首次 iOS 新用例因匹配了被学习进度覆盖的初始标签失败，已根据实际可访问树修正并重跑通过。
 
-证据：`artifacts/trials-e2e-final.log`、`artifacts/trials-browser-final.log`、`artifacts/android-trials-final.log`、`artifacts/ios-trials-final.log`；iOS 报告为 `artifacts/ios-native-1792276230352.xcresult`。手机尺寸实际截图为 `artifacts/trial-raise-mobile.png`、`artifacts/trial-short-mobile-webkit.png`。这些是浏览器/模拟器验证，不是真机证明。
+证据：`artifacts/trials-e2e-final.log`、`artifacts/trials-browser-controls.log`、`artifacts/android-trials-controls.log`、`artifacts/ios-trials-controls.log`；iOS 报告为 `artifacts/ios-native-1792277030640.xcresult`。手机尺寸实际截图为 `artifacts/trial-raise-mobile.png`、`artifacts/trial-short-mobile-webkit.png`。这些是浏览器/模拟器验证，不是真机证明。
 
-macOS App / DMG 已重建。生产离线回归 4 项通过，包含断网进入试炼及断网重载后印记恢复（`artifacts/offline-trials-final.log`）。新增 Windows 原生试炼、印记重载及练习钱包隔离检查，尚待本次 CI 实际执行；没有将脚本或语法检查计作 Windows 运行成功。实际截图预览为 `artifacts/show-me-trials.html`。
+macOS App / DMG 已重建。生产离线回归 4 项通过，包含断网进入试炼及断网重载后印记恢复（`artifacts/offline-trials-controls.log`）。Windows 原生试炼、印记重载及练习钱包隔离检查已在 [试炼 CI](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39075570728) 实际安装运行后通过，结果 JSON 和截图下载于 `artifacts/windows-trials-run/artifacts/windows-native/`。该 CI 的 iOS 任务仍在执行；最新按钮修正的完整状态以当前 PR 检查为准。实际截图预览为 `artifacts/show-me-trials.html`。
+
+最后的界面修正：单纯把反馈滚入视野仍可能遮住完成按钮。现改为滚至内容末尾，保留底部安全区；浏览器 320×568 断言与 iOS 原生按钮位置断言均通过。修正后的模拟器截图位于 `artifacts/ios-trials-controls-attachments/`。
 
 ## 可重复执行
 
