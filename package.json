@@ -1,0 +1,36 @@
+{
+  "name": "wendao-poker",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test:e2e": "playwright test",
+    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "native:sync": "node scripts/platform.mjs sync",
+    "build:android": "node scripts/platform.mjs android",
+    "build:ios": "node scripts/platform.mjs ios-sim",
+    "build:ios-device": "node scripts/platform.mjs ios-device",
+    "build:desktop": "node scripts/platform.mjs desktop",
+    "brand": "node scripts/brand.mjs",
+    "test:android": "node scripts/platform.mjs android-test"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/preferences": "8.0.1",
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@playwright/test": "1.64.1",
+    "@tauri-apps/cli": "2.12.3",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

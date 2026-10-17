@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="jade" x2=".8" y2="1"><stop stop-color="#365344"/><stop offset=".55" stop-color="#142c24"/><stop offset="1" stop-color="#0c1c18"/></linearGradient>
+    <linearGradient id="gold" x2="1" y2="1"><stop stop-color="#f0ddab"/><stop offset=".5" stop-color="#c3a66b"/><stop offset="1" stop-color="#e1c98d"/></linearGradient>
+    <radialGradient id="light"><stop stop-color="#a6b47e" stop-opacity=".13"/><stop offset="1" stop-color="#a6b47e" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#jade)" d="M0 0h1024v1024H0z"/>
+  <circle cx="460" cy="400" r="440" fill="url(#light)"/>
+  <rect x="64" y="64" width="896" height="896" rx="186" fill="none" stroke="url(#gold)" stroke-width="5" opacity=".7"/>
+  <rect x="83" y="83" width="858" height="858" rx="168" fill="none" stroke="#b8a471" stroke-width="2" opacity=".22"/>
+  <g fill="none" stroke="#d4be82" stroke-width="2" opacity=".2"><circle cx="512" cy="512" r="341"/><circle cx="512" cy="512" r="357"/><path d="M155 512h36m642 0h36M512 155v36m0 642v36"/></g>
+  <rect x="279" y="196" width="466" height="631" rx="25" fill="#1c372c" stroke="url(#gold)" stroke-width="5" transform="rotate(6 512 512)"/>
+  <rect x="293" y="210" width="438" height="603" rx="18" fill="none" stroke="#bda66d" stroke-width="2" opacity=".42" transform="rotate(6 512 512)"/>
+  <text x="512" y="660" text-anchor="middle" fill="url(#gold)" font-family="Songti SC,STSong,Noto Serif CJK SC,serif" font-size="420">道</text>
+  <path d="m512 742 14 19-14 19-14-19Z" fill="#d1b77c"/>
+</svg>
