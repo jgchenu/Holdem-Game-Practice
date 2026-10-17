@@ -1,7 +1,6 @@
 // Native Windows CI test through Tauri's standard WebDriver bridge, not a browser substitute.
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { homedir } from "node:os";
 import { resolve, join } from "node:path";
 import assert from "node:assert/strict";
 
@@ -13,8 +12,11 @@ if (!existsSync(application))
   throw new Error(`Application missing: ${application}`);
 const output = resolve("artifacts/windows-native");
 mkdirSync(output, { recursive: true });
-const bridge = spawn(join(homedir(), ".cargo/bin/tauri-driver.exe"), [], {
+// These are the native WebView2 capabilities used by Tauri's Windows bridge.
+// Start Microsoft's driver directly to preserve verbose launch diagnostics.
+const bridge = spawn("msedgedriver.exe", ["--port=4444", "--verbose"], {
   stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, TAURI_WEBVIEW_AUTOMATION: "true" },
 });
 let logs = "";
 bridge.stdout.on("data", (data) => {
@@ -33,12 +35,20 @@ async function command(
   body,
   method = body === undefined ? "GET" : "POST",
 ) {
-  const response = await fetch("http://127.0.0.1:4444" + path, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(45_000),
-  });
+  console.log(`WebDriver ${method} ${path}`);
+  let response;
+  try {
+    response = await fetch("http://127.0.0.1:4444" + path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(
+        path === "/session" ? 120_000 : path === "/status" ? 2_000 : 30_000,
+      ),
+    });
+  } catch (error) {
+    throw new Error(`WebDriver ${method} ${path}: ${error.message}`);
+  }
   const result = await response.json();
   if (!response.ok || result.value?.error)
     throw new Error(JSON.stringify(result));
@@ -88,7 +98,11 @@ try {
   }, "Tauri driver starts");
   const created = await command("/session", {
     capabilities: {
-      alwaysMatch: { browserName: "wry", "tauri:options": { application } },
+      alwaysMatch: {
+        browserName: "webview2",
+        "ms:edgeChromium": true,
+        "ms:edgeOptions": { binary: application, args: [] },
+      },
     },
   });
   session = created.sessionId;

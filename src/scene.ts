@@ -1,3 +1,4 @@
+import { tableSerif } from "./fonts";
 import Phaser from "phaser";
 import { stages, type Preferences } from "./demo";
 import { AudioFeedback } from "./audio";
@@ -13,7 +14,7 @@ type Hooks = {
   ready: () => void;
 };
 const gold = "#d7bd87";
-const serif = '"Songti SC", "STSong", serif';
+const serif = tableSerif;
 const seats = [
   { x: 210, y: 53, name: "沈听澜", sect: "云隐宗" },
   { x: 53, y: 163, name: "顾长风", sect: "磐石宗" },

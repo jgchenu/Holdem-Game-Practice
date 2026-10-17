@@ -24,6 +24,7 @@ test("手机下注面板、重复点击保护与刷新后恢复当前手牌", as
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await start(page, false);
+  expect(await page.evaluate(() => [...document.fonts].some(face=>face.family.includes('Wendao Serif') && face.status==='loaded'))).toBeTruthy();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

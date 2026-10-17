@@ -98,9 +98,6 @@ jobs:
       - run: rustup default stable
       - run: npm ci
       - run: npm run build:desktop
-      - name: Install native Windows test driver
-        if: runner.os == 'Windows'
-        run: cargo install tauri-driver --version 2.1.0 --locked
       - name: Match WebView2 driver and install our NSIS package
         if: runner.os == 'Windows'
         shell: pwsh

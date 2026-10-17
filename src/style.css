@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "Wendao Serif";
+  src: url("/fonts/wendao-serif.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
 :root {
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
   color: #e5dfc9;
@@ -7,7 +14,7 @@
   -webkit-font-smoothing: antialiased;
   --gold: #d7bc80;
   --muted: #8ea295;
-  --serif: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+  --serif: "Wendao Serif", "Songti SC", "STSong", serif;
 }
 * {
   box-sizing: border-box;

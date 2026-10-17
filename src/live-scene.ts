@@ -1,3 +1,4 @@
+import { tableSerif } from "./fonts";
 import Phaser from "phaser";
 import { createTextures, ensureCardTexture } from "./textures";
 import { type Preferences } from "./preferences";
@@ -5,7 +6,7 @@ import { AudioFeedback } from "./audio";
 import { type Observation } from "./core/poker";
 import { type Card } from "./core/cards";
 
-const serif = '"Songti SC", "STSong", serif';
+const serif = tableSerif;
 export const seatPositions = [
   { x: 210, y: 420 },
   { x: 53, y: 330 },

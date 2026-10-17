@@ -1,7 +1,8 @@
+import { tableSerif } from "./fonts";
 import Phaser from "phaser";
 import { rankOf, rankText, suitOf, suits, type Card } from "./core/cards";
 
-const serif = '"Songti SC", "Noto Serif CJK SC", "STSong", serif';
+const serif = tableSerif;
 
 function make(
   scene: Phaser.Scene,
