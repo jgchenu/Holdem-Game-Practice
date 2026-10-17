@@ -99,5 +99,14 @@ Android 调试包：`artifacts/packages/wendao-android-debug.apk`。iOS 模拟�
 
 - [跨平台 CI（含 iOS / Windows 原生运行）全部通过](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39070519242)。Windows 真实运行的是 NSIS 安装后的 `app.exe`，不是独立浏览器；执行加注、存档重载、摊牌、复盘与 360px 窗口检查，结果 JSON 与截图保存在 CI `desktop-windows-latest` 附件的 `artifacts/windows-native/`。用户自己的 Windows 电脑验收仍待完成。
 - Windows 上游启动问题采用安装程序先启动、测试进程显式启用本机端口、EdgeDriver attach 的方案解决；正常启动不启用测试调试端口。原生运行通过前的失败尝试全部保留为失败证据。
-- 最新本地存档加固：按个人账本校验、重算完整结算并校验底池/牌型。损坏的复盘结果被拒绝；旧版弃牌单底池记录可迁移，保留原手牌与灵石。弃牌胜利时将未获跟注的投入单独标为返还。15 项核心/服务测试与四种浏览器的损坏存档场景通过；该增量的最终全平台 CI 待跑。
+- 最新本地存档加固：按个人账本校验、重算完整结算并校验底池/牌型。损坏的复盘结果被拒绝；旧版弃牌单底池记录可迁移，保留原手牌与灵石。弃牌胜利时将未获跟注的投入单独标为返还。15 项核心/服务测试与四种浏览器的损坏存档场景通过；该增量的最终全平台 CI 已通过，见下方最终功能提交。
 - `web-perf` 指定的 Chrome DevTools MCP 当前未配置，未采集专项 Core Web Vitals / 帧时间指标。FPS 目标、真机音效、触控延迟与持续运行仍未验收，不用构建成功或模拟器代替。
+
+
+## 最终功能提交的回归（4f28fdc）
+
+[完整 CI](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39072155136)：Web、Android、iOS、macOS、Windows 五项任务全部成功。核心与师父服务测试 15 项，浏览器场景 34 项通过、2 项按项目主动跳过，生产离线 2 项通过。iOS 的 CI 包含原生 XCTest；Windows 包含 NSIS 安装后的原生运行测试。
+
+本机最后串行回归：Android 完整动画/加注/Activity 恢复/复盘/师父面板 1 项通过；iOS 师父与进程重启恢复 1 项通过（`artifacts/ios-native-1792273536679.xcresult`）；生产版离线恢复 2 项通过。日志为 `artifacts/android-final.log`、`artifacts/ios-final.log`、`artifacts/offline-final.log`。
+
+剩余验收：解锁 Mac 后复验最新桌面窗口初始化；连接 iPhone / Android 真机并完成 Xcode 账号与签名；用户 Windows 电脑运行；真机触控、音效、持续帧时间与内存；国内模型真实联调；正式服务鉴权、配额与发布配置。专项性能工具当前未配置，未提供或承诺实测 60 FPS。持续目标保持进行中。
