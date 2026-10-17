@@ -50,9 +50,50 @@ public class PracticeInstrumentedTest {
         until("document.querySelector('#live-table')?.dataset.busy === 'false'");
     }
 
-    @Test public void nativeGameplayPersistsAcrossActivityRecreation() throws Exception {
+    private void requireEmulator() {
         // This test owns emulator data only; never overwrite a person's practice session on a phone.
         assumeTrue("Isolated native tests require an emulator", Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk") || Build.PRODUCT.contains("sdk"));
+    }
+
+    @Test public void prepareForHostProcessDeath() throws Exception {
+        assumeTrue("Host-orchestrated phase only", "prepare-process-death".equals(InstrumentationRegistry.getArguments().getString("phase")));
+        requireEmulator();
+        Context context = instrumentation.getTargetContext();
+        context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).edit()
+            .putString("wendao:practice:v1", "null")
+            .putString("wendao:preferences:v1", "{\"sound\":false,\"reducedMotion\":true,\"quality\":\"balanced\"}")
+            .putString("wendao:learning:v1", "[\"ranks\",\"actions\",\"position\"]")
+            .putString("wendao:trials:v1", "[]").commit();
+        launch();
+        try {
+            until("document.querySelector('#start') && !document.querySelector('#start').disabled");
+            js("document.querySelector('#start').click()"); idle();
+            until("document.querySelector('#live-table').dataset.actor === '0'");
+            js("document.querySelector('#study').click();document.querySelector('[data-trial=free-check]').click();document.querySelector('#trial-call').click()");
+            until("document.querySelector('#trial-feedback').classList.contains('passed') && !document.querySelector('#trial-done').disabled");
+            js("document.querySelector('#study-dialog').close()");
+            String snapshot = js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent})");
+            assertTrue(context.getSharedPreferences("LifecycleTestExpected", Context.MODE_PRIVATE).edit().putString("snapshot", snapshot).commit());
+            assertTrue(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:trials:v1", "").contains("free-check"));
+        } finally { instrumentation.runOnMainSync(() -> activity.finish()); }
+    }
+
+    @Test public void restoreAfterHostProcessDeath() throws Exception {
+        assumeTrue("Host-orchestrated phase only", "restore-process-death".equals(InstrumentationRegistry.getArguments().getString("phase")));
+        requireEmulator();
+        String expected = instrumentation.getTargetContext().getSharedPreferences("LifecycleTestExpected", Context.MODE_PRIVATE).getString("snapshot", null);
+        assertNotNull("The preparation phase must have saved its expected state", expected);
+        launch();
+        try {
+            idle(); until("document.querySelector('#resume') && !document.querySelector('#resume').hidden");
+            assertEquals(expected, js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent})"));
+            js("document.querySelector('#study').click()");
+            until("document.querySelector('[data-trial=free-check]').textContent.includes('已达成')");
+        } finally { instrumentation.runOnMainSync(() -> activity.finish()); }
+    }
+
+    @Test public void nativeGameplayPersistsAcrossActivityRecreation() throws Exception {
+        requireEmulator();
         Context context = instrumentation.getTargetContext();
         context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).edit()
             .putString("wendao:practice:v1", "null")

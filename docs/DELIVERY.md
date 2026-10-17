@@ -18,7 +18,7 @@
 | --- | --- | --- | --- |
 | Web | Vite 生产构建通过 | Chromium 手机/窄屏/桌面、移动尺寸 WebKit；离线重载与恢复通过 | 手机浏览器安装至主屏幕、长时间离线、实际触控和性能 |
 | iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；师父面板、试炼和进程终止再启动恢复 XCTest 2 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
-| Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器，原生自动化覆盖行动、加注、Activity 重建、完整动画、摊牌复盘、师父与试炼印记恢复 | 真机连接、系统杀进程恢复、音频、触控与持续性能 |
+| Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器，原生自动化覆盖行动、加注、Activity 重建、完整动画、摊牌复盘、师父与试炼印记恢复；主机编排强制停止与新进程恢复通过 | 真机连接、低内存回收、音频、触控与持续性能 |
 | macOS | Tauri Apple Silicon App / DMG 可构建 | 本机已操作恢复、加注、翻牌、师父；最新窗口初始化的 GUI 复验待解锁 | 最新包窗口复验、音频、持续性能、签名公证 |
 | Windows | Tauri x64 NSIS 可构建 | Windows CI 实际安装并启动原生 App，通过加注、重载恢复、摊牌复盘、360px 窗口和试炼印记测试 | 用户电脑实际运行、音频与持续性能 |
 
@@ -56,9 +56,18 @@
 
 证据：`artifacts/trials-e2e-final.log`、`artifacts/trials-browser-controls.log`、`artifacts/android-trials-controls.log`、`artifacts/ios-trials-controls.log`；iOS 报告为 `artifacts/ios-native-1792277030640.xcresult`。手机尺寸实际截图为 `artifacts/trial-raise-mobile.png`、`artifacts/trial-short-mobile-webkit.png`。这些是浏览器/模拟器验证，不是真机证明。
 
-macOS App / DMG 已重建。生产离线回归 4 项通过，包含断网进入试炼及断网重载后印记恢复（`artifacts/offline-trials-controls.log`）。Windows 原生试炼、印记重载及练习钱包隔离检查已在 [试炼 CI](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39075570728) 实际安装运行后通过，结果 JSON 和截图下载于 `artifacts/windows-trials-run/artifacts/windows-native/`。该 CI 的 iOS 任务仍在执行；最新按钮修正的完整状态以当前 PR 检查为准。实际截图预览为 `artifacts/show-me-trials.html`。
+macOS App / DMG 已重建。生产离线回归 4 项通过，包含断网进入试炼及断网重载后印记恢复（`artifacts/offline-trials-controls.log`）。Windows 原生试炼、印记重载及练习钱包隔离检查已在 [试炼 CI](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39075570728) 实际安装运行后通过，结果 JSON 和截图下载于 `artifacts/windows-trials-run/artifacts/windows-native/`。该试炼 CI 后续五项全部通过。安全区提交 a1523d8 的 iOS / Android / macOS / Windows 通过，Web 回归发现迟到音频恢复问题，见下方增量。实际截图预览为 `artifacts/show-me-trials.html`。
 
 最后的界面修正：单纯把反馈滚入视野仍可能遮住完成按钮。现改为滚至内容末尾，保留底部安全区；浏览器 320×568 断言与 iOS 原生按钮位置断言均通过。修正后的模拟器截图位于 `artifacts/ios-trials-controls-attachments/`。
+
+
+### 本轮：进程恢复与迟到音频恢复
+
+- Android 新增独立主机编排：在模拟器准备真实手牌、课程及试炼印记 → 启动 App 并记录 PID → `am force-stop` → 确认 PID 消失 → 重新启动取得新 PID → 由另一轮 instrumentation 核对同一手牌、灵石、课程进度及印记。原仪器测试 1 项通过；两个专用方法在普通 Gradle 轮次中主动跳过，由主机按准备/恢复阶段各执行并明确校验通过。结果为 `artifacts/android-process-death/result.json`，原始命令日志为同目录 `adb.log`，完整回归为 `artifacts/android-lifecycle-final.log`。此结果是强制停止后的恢复，不是低内存回收或真机验收。命令依据 [Android adb](https://developer.android.com/tools/adb#am) 和 [命令行测试说明](https://developer.android.com/studio/test/command-line)。
+- 安装测试夹具前要求仅连接一台已确认的模拟器，并将 Gradle 与 adb 绑定到该序列号；真机、混合连接、多台设备及不匹配的序列号会被预检拒绝。规则单元测试通过，实际执行环境为本机 API 36 模拟器。失败或未完成的主机测试不会保留旧的成功结果。
+- a1523d8 的 CI 发现快速静音后，迟到的恢复仍可能使音频上下文回到运行状态。新增延迟原生 `resume` 的回归先在旧代码稳定失败，再补齐 `statechange` 下的静音约束；当前 8 项音频测试通过，包含等待迟到请求真正完成后仍为暂停状态。保留关闭音效、后台暂停、显式恢复及销毁的检查。修复前后日志为 `artifacts/audio-late-resume-before.log`、`artifacts/audio-late-resume-after.log`。
+
+本轮本机：规则/服务/平台单元测试 20 项、完整浏览器 46 项通过（2 项按项目有意跳过）、离线 4 项通过；Android 仪器与主机进程恢复流程、iOS XCTest 2 项通过。最新 iPhone 未签名 arm64 App 和 macOS App / DMG 已重建。日志为 `artifacts/mobile-lifecycle-e2e.log`、`artifacts/ios-lifecycle-final.log`、`artifacts/ios-device-lifecycle-final.log`、`artifacts/macos-lifecycle-final.log`、`artifacts/offline-lifecycle-final.log`。iOS 报告为 `artifacts/ios-native-1792279145447.xcresult`。这次音频修正的最终云端回归以 PR 当前提交的检查为准，未把 a1523d8 的失败运行计为整轮通过。
 
 ## 可重复执行
 
@@ -69,7 +78,7 @@ npm run check:server
 npm run test:e2e
 npm run test:offline
 npm run build:android
-npm run test:android       # 隔离测试仅对模拟器执行
+npm run test:android       # 单台隔离模拟器；含独立进程恢复
 npm run build:ios
 npm run test:ios
 npm run build:ios-device   # 未签名；还不能直接安装

@@ -89,7 +89,34 @@ test('真实音频上下文停止待播和弦，销毁后关闭资源且不重�
   await expect(page.locator('#audio-fixture')).toHaveAttribute('data-phase', 'cancelled');
   await expect.poll(() => states(page)).toEqual(['suspended']);
   expect(await page.evaluate(() => (window as any).audioProbe.activity.starts)).toBe(3);
+  // Delay a real native resume until after mute, exposing the late-completion race deterministically.
   await page.evaluate(() => {
+    const probe = (window as any).audioProbe;
+    const context: AudioContext = probe.contexts[0];
+    probe.originalResume = context.resume.bind(context);
+    context.resume = () => {
+      probe.lateResume = new Promise<void>((resolve, reject) => {
+        setTimeout(() => probe.originalResume().then(resolve, reject), 10);
+      });
+      return probe.lateResume;
+    };
+    (document.querySelector('#audio-fixture') as HTMLButtonElement).onclick = async () => {
+      const feedback = (window as any).audioFixture;
+      feedback.enabled = true;
+      const pending = feedback.preview('card');
+      feedback.enabled = false;
+      await pending;
+      (document.querySelector('#audio-fixture') as HTMLElement).dataset.phase = 'late-cancelled';
+    };
+  });
+  await page.locator('#audio-fixture').click();
+  await expect(page.locator('#audio-fixture')).toHaveAttribute('data-phase', 'late-cancelled');
+  await page.evaluate(() => (window as any).audioProbe.lateResume);
+  await expect.poll(() => states(page)).toEqual(['suspended']);
+  expect(await page.evaluate(() => (window as any).audioProbe.activity.starts)).toBe(3);
+  await page.evaluate(() => {
+    const probe = (window as any).audioProbe;
+    probe.contexts[0].resume = probe.originalResume;
     (document.querySelector('#audio-fixture') as HTMLButtonElement).onclick = async () => {
       const feedback = (window as any).audioFixture;
       feedback.enabled = true;

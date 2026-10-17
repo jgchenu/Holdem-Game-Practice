@@ -9,6 +9,12 @@ export class AudioFeedback {
   private voices = new Map<OscillatorNode, GainNode>();
   private readonly onHidden = () => { if (document.hidden) this.suspend(); };
   private readonly onSuspend = () => this.suspend();
+  private readonly enforceSilence = (event: Event) => {
+    const context = event.currentTarget as AudioContext;
+    // A cancelled resume may complete after suspend. Preserve the latest explicit sound intent.
+    if (context.state === 'running' && (!this.enabled || this.blocked || this.disposed || document.hidden))
+      void context.suspend().catch(() => {});
+  };
 
   constructor() {
     document.addEventListener('visibilitychange', this.onHidden);
@@ -28,7 +34,11 @@ export class AudioFeedback {
     this.blocked = false;
     const revision = this.revision;
     try {
-      if (!this.context || this.context.state === 'closed') this.context = new AudioContext();
+      if (!this.context || this.context.state === 'closed') {
+        this.context?.removeEventListener('statechange', this.enforceSilence);
+        this.context = new AudioContext();
+        this.context.addEventListener('statechange', this.enforceSilence);
+      }
       const context = this.context;
       if (!await this.resumeContext(context)) return false;
       if (!this.enabled || this.blocked || this.disposed || document.hidden) {
@@ -97,7 +107,10 @@ export class AudioFeedback {
     document.removeEventListener('visibilitychange', this.onHidden);
     window.removeEventListener('pagehide', this.onSuspend);
     window.removeEventListener('wendao:suspend', this.onSuspend);
-    if (this.context && this.context.state !== 'closed') void this.context.close().catch(() => {});
+    const context = this.context;
+    if (context && context.state !== 'closed') {
+      void context.close().catch(() => {}).finally(() => context.removeEventListener('statechange', this.enforceSilence));
+    } else context?.removeEventListener('statechange', this.enforceSilence);
     this.context = undefined;
   }
 }

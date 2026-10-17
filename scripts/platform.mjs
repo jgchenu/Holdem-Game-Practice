@@ -11,6 +11,7 @@ import {
 import { homedir } from "node:os";
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isolatedEmulator } from "./android-test-device.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const target = process.argv[2];
@@ -116,6 +117,14 @@ if (target === "android" || target === "android-test") {
   if (!existsSync(sdk))
     throw new Error("找不到 Android SDK，请设置 ANDROID_HOME。");
   env.ANDROID_HOME = sdk;
+  if (target === "android-test") {
+    const adb = join(sdk, "platform-tools", process.platform === "win32" ? "adb.exe" : "adb");
+    const listing = spawnSync(adb, ["devices"], { env, encoding: "utf8" });
+    if (listing.error || listing.status !== 0) throw new Error("无法查询 Android 测试设备。");
+    env.ANDROID_SERIAL = isolatedEmulator(listing.stdout, env.ANDROID_SERIAL);
+    const emulator = spawnSync(adb, ["-s", env.ANDROID_SERIAL, "shell", "getprop", "ro.kernel.qemu"], { env, encoding: "utf8" });
+    if (emulator.error || emulator.status !== 0 || emulator.stdout.trim() !== "1") throw new Error("测试目标不是已确认的 Android 模拟器。");
+  }
   writeFileSync(
     join(root, "android", "local.properties"),
     `sdk.dir=${sdk.replaceAll("\\", "\\\\").replaceAll(":", "\\:")}\n`,
@@ -135,6 +144,8 @@ if (target === "android" || target === "android-test") {
     join(packages, "wendao-android-debug.apk"),
   );
   console.log("Android 调试 APK：artifacts/packages/wendao-android-debug.apk");
+  if (target === "android-test")
+    run(process.execPath, ["scripts/android-process-death.mjs"]);
 } else {
   if (process.platform !== "darwin")
     throw new Error("iOS 构建需要 macOS 与 Xcode。");
