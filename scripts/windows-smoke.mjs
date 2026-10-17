@@ -104,6 +104,8 @@ try {
     env: {
       ...process.env,
       TAURI_WEBVIEW_AUTOMATION: "true",
+      WENDAO_TEST_DEBUG_PORT: "9222",
+      WENDAO_TEST_PROFILE: resolve("artifacts/.windows-test-profile"),
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9222",
       WEBVIEW2_USER_DATA_FOLDER: resolve("artifacts/.windows-test-profile"),
     },

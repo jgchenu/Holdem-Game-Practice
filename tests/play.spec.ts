@@ -1,5 +1,18 @@
 import { test, expect, type Page } from "@playwright/test";
 
+test("首次资源加载失败时能重试进入，字体不可用仍可练习", async ({ page }) => {
+  await page.route("**/src/play-ui.ts*", (route) => route.abort("failed"));
+  await page.goto("/");
+  await expect(page.locator("#boot-retry")).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("本地进度会继续保留");
+  await page.unroute("**/src/play-ui.ts*");
+  await page.route("**/fonts/wendao-serif.woff2", (route) =>
+    route.abort("failed"),
+  );
+  await page.locator("#boot-retry").click();
+  await expect(page.locator("#start")).toBeEnabled();
+});
+
 async function idle(page: Page) {
   await expect(page.locator("#live-table")).toHaveAttribute(
     "data-busy",
@@ -24,7 +37,14 @@ test("手机下注面板、重复点击保护与刷新后恢复当前手牌", as
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await start(page, false);
-  expect(await page.evaluate(() => [...document.fonts].some(face=>face.family.includes('Wendao Serif') && face.status==='loaded'))).toBeTruthy();
+  expect(
+    await page.evaluate(() =>
+      [...document.fonts].some(
+        (face) =>
+          face.family.includes("Wendao Serif") && face.status === "loaded",
+      ),
+    ),
+  ).toBeTruthy();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

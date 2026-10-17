@@ -75,4 +75,4 @@ src/
 
 ## 原生工程与安装包
 
-移动端使用 Capacitor 承载同一牌桌和规则，桌面端使用 Tauri。`npm run build:android`、`npm run build:ios`、`npm run build:desktop` 会同步资源并构建当前平台产物。Android 需要 SDK 36 / JDK 21，iOS 需要 macOS / Xcode 26，桌面需要 Rust。安装、签名、真机与性能验收状态见 [docs/DELIVERY.md](docs/DELIVERY.md)。
+移动端使用 Capacitor 承载同一牌桌和规则，桌面端使用 Tauri。`npm run build:android`、`npm run build:ios`、`npm run build:desktop` 会同步资源并构建当前平台产物。Android 需要 SDK 36 / JDK 21，iOS 需要 macOS / Xcode 26，桌面需要 Rust。`npm run test:android` 执行模拟器 App 测试，`npm run test:ios` 执行原生 XCTest 师父面板与进程重启恢复测试。安装、签名、真机与性能验收状态见 [docs/DELIVERY.md](docs/DELIVERY.md)。

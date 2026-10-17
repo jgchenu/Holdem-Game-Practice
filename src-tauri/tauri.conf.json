@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "create": false,
         "title": "问道牌途 · 云隐修炼",
         "width": 1160,
         "height": 860,

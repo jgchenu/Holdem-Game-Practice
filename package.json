@@ -19,7 +19,8 @@
     "build:ios-signed": "node scripts/platform.mjs ios-signed",
     "build:desktop": "node scripts/platform.mjs desktop",
     "brand": "node scripts/brand.mjs",
-    "test:android": "node scripts/platform.mjs android-test"
+    "test:android": "node scripts/platform.mjs android-test",
+    "test:ios": "node scripts/platform.mjs ios-test"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",

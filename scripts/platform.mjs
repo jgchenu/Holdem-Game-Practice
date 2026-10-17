@@ -15,6 +15,8 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const target = process.argv[2];
 const env = { ...process.env };
+// Native test runs never contact a configured, billable mentor service.
+if (target === "ios-test" || target === "android-test") env.VITE_COACH_URL = "";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 const packages = join(root, "artifacts", "packages");
@@ -71,6 +73,7 @@ if (
     "android",
     "android-test",
     "ios-sim",
+    "ios-test",
     "ios-device",
     "ios-signed",
     "desktop",
@@ -78,7 +81,7 @@ if (
   ].includes(target)
 ) {
   console.error(
-    "Usage: node scripts/platform.mjs sync|android|android-test|ios-sim|ios-device|ios-signed|desktop|desktop-debug",
+    "Usage: node scripts/platform.mjs sync|android|android-test|ios-sim|ios-test|ios-device|ios-signed|desktop|desktop-debug",
   );
   process.exit(1);
 }
@@ -135,8 +138,29 @@ if (target === "android" || target === "android-test") {
 } else {
   if (process.platform !== "darwin")
     throw new Error("iOS 构建需要 macOS 与 Xcode。");
-  const simulator = target === "ios-sim",
+  const testing = target === "ios-test";
+  const simulator = target === "ios-sim" || testing,
     signed = target === "ios-signed";
+  let destination = simulator
+    ? "generic/platform=iOS Simulator"
+    : "generic/platform=iOS";
+  if (testing) {
+    const listing = spawnSync(
+      "xcrun",
+      ["simctl", "list", "devices", "available", "--json"],
+      { env, encoding: "utf8" },
+    );
+    if (listing.status !== 0) throw new Error("无法查询 iOS 模拟器。");
+    const devices = Object.values(JSON.parse(listing.stdout).devices)
+      .flat()
+      .filter((device) => /iPhone|iPad/.test(device.name));
+    const device = env.IOS_TEST_DEVICE
+      ? devices.find((device) => device.udid === env.IOS_TEST_DEVICE)
+      : devices.find((device) => device.state === "Booted") || devices[0];
+    if (!device)
+      throw new Error("请安装可用的 iPhone 模拟器，或设置 IOS_TEST_DEVICE。");
+    destination = `platform=iOS Simulator,id=${device.udid}`;
+  }
   if (signed && !env.APPLE_TEAM_ID)
     throw new Error(
       "签名构建需要设置 APPLE_TEAM_ID，并在 Xcode 登录对应开发者账号。",
@@ -154,7 +178,7 @@ if (target === "android" || target === "android-test") {
     "-sdk",
     simulator ? "iphonesimulator" : "iphoneos",
     "-destination",
-    simulator ? "generic/platform=iOS Simulator" : "generic/platform=iOS",
+    destination,
     "-derivedDataPath",
     derived,
     ...(signed
@@ -165,7 +189,15 @@ if (target === "android" || target === "android-test") {
           "-allowProvisioningUpdates",
         ]
       : ["CODE_SIGNING_ALLOWED=NO"]),
-    "build",
+    ...(testing
+      ? [
+          "-parallel-testing-enabled",
+          "NO",
+          "-resultBundlePath",
+          join(root, "artifacts", `ios-native-${Date.now()}.xcresult`),
+          "test",
+        ]
+      : ["build"]),
   ]);
   console.log(
     simulator

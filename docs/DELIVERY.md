@@ -16,7 +16,7 @@
 | 平台 | 工程与构建 | 安装运行 | 功能与生命周期 | 性能与真机 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | Web | Vite 生产构建通过 | 本机开发服务可运行 | 浏览器流程通过 | 真机浏览器、持续运行待验 | 开发中 |
-| iOS | Capacitor 工程与无签名模拟器构建通过 | iPhone 17 Pro / iOS 26.5 模拟器已安装运行 | 实际操作出牌、加注、后台与重新启动恢复通过 | 用户有 iPhone，当前未连接；性能、音频待验 | 开发中 |
+| iOS | Capacitor 工程与无签名模拟器构建通过 | iPhone 17 Pro / iOS 26.5 模拟器已安装运行 | 实际操作出牌、加注、后台恢复通过；原生 XCTest 师父面板与进程重启恢复 1 / 1 通过 | 用户有 iPhone，当前未连接；性能、音频待验 | 开发中 |
 | Android | Capacitor 工程、SDK 36 / JDK 21 构建通过 | API 36 模拟器安装运行通过 | App 原生自动化通过：行动、加注、Activity 重建恢复、摊牌复盘 | 用户有 Android 手机，当前未连接；性能、音频待验 | 开发中 |
 | macOS | Tauri Apple Silicon App 与 DMG 构建通过 | 本机启动和显示通过 | 恢复、加注、翻牌已操作；后台动画等待问题修复后复验通过 | 音频、持续运行与签名公证待验 | 开发中 |
 | Windows | Tauri x64 NSIS 安装程序已在 Windows CI 构建通过 | 用户电脑安装待验 | 待验 | 用户有 Windows 电脑；实际运行与音频待验 | 开发中 |
@@ -85,3 +85,11 @@ Android 调试包：`artifacts/packages/wendao-android-debug.apk`。iOS 模拟�
 
 - 最新本机验证：核心与服务 13 / 13、浏览器 30 通过 / 2 个按项目跳过、生产离线 2 / 2、Android 原生完整动画与师父断言 1 / 1；依赖 audit 已修复构建工具的旧 UUID 依赖，官方 registry 审计为 0 已知漏洞。
 - Windows 新增 NSIS 静默安装与 Tauri WebDriver 原生运行验证脚本，覆盖加注、存档重载、摊牌、复盘和窄窗口，并保留截图；当前仅完成脚本与语法检查，等待 Windows CI 实际运行，不计为通过。使用 [Tauri 官方 WebDriver 方案](https://v2.tauri.app/develop/tests/webdriver/ci/)。
+
+
+- iOS 新增共享 App scheme 与 PracticeUITests 原生测试目标。`npm run test:ios` 已在 iPhone 17 Pro / iOS 26.5 模拟器通过（1 / 1）：师父面板、原生本地回退、终止并重新启动进程后恢复同一手牌。报告 `artifacts/ios-native-1792271281989.xcresult`，导出截图在 `artifacts/ios-native-attachments/`。这仍不代替真机结果。
+- 中文宋体统一为本地分发的开源 Noto Serif SC 派生子集，750 个映射字符，291,304 字节；保留 OFL 授权，源版本和重新生成步骤见 `public/fonts/README.md`。Canvas 绘制前加载字体，下载失败可使用系统回退。四种浏览器场景确认字体实际加载，新增资源/字体失败重试测试 4 / 4 通过。
+- macOS 新包已重新启动并实际验证师父面板、价格计算与未配置服务时的本地回退；截图 `artifacts/macos-native-mentor.png`。
+- Windows NSIS 安装已在 CI 成功，WebView2 创建会话失败。日志出现上游报告的 DevToolsActivePort 问题，参见 [runner-images #14738](https://github.com/actions/runner-images/issues/14738)。正在按微软支持的 attach 方式适配测试进程，运行测试未通过前保持待验，不跳过失败断言。
+
+- 桌面窗口初始化调整以支持仅测试进程显式启用本机调试端口；macOS 编译与 DMG 构建通过。随后界面工具报告 Mac 锁屏，无法继续 GUI 复验，已请用户手动解锁，此次窗口调整的 macOS 运行复验保持待办。正常启动未配置测试环境变量时不启用调试端口。

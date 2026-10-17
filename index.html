@@ -12,9 +12,17 @@
     <link rel="apple-touch-icon" href="/icon.png" />
     <meta name="description" content="问道牌途：以牌入道，以心观局。修仙风格的德州扑克单人练习与进阶修炼。" />
     <title>问道牌途 · 云隐试炼</title>
+    <style>
+      html,body{margin:0;background:#13271e;color:#dccb9d}
+      .boot-screen{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;background:radial-gradient(ellipse at 50% 35%,#254536,#101f18 75%);font:16px "Songti SC",serif;box-sizing:border-box;padding:32px}
+      .boot-screen img{width:76px;height:76px;border-radius:19px;box-shadow:0 12px 45px #0005}
+      .boot-screen h1{margin:8px 0;font-size:27px;font-weight:400;letter-spacing:.25em}
+      .boot-screen p{margin:0;line-height:1.8;font-size:13px;color:#a6b799;max-width:280px}
+      .boot-screen button{min-height:48px;border:1px solid #c9ae70;border-radius:8px;padding:0 32px;background:#ceb678;color:#193627;font:16px serif;cursor:pointer}
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app"><div class="boot-screen" role="status"><img src="/icon.png" alt="" width="76" height="76"/><h1>问道牌途</h1><p>静心片刻，正在铺开牌席…</p><noscript><p>请启用 JavaScript 后进入修炼。</p></noscript></div></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

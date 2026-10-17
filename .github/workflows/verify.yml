@@ -72,13 +72,15 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run build:ios
+      - run: npm run test:ios
       - name: Archive simulator app preserving bundle permissions
         run: ditto -c -k --sequesterRsrc --keepParent artifacts/ios/Build/Products/Debug-iphonesimulator/App.app artifacts/packages/wendao-ios-simulator.zip
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ios-simulator-app
-          path: artifacts/packages/*.zip
+          path: |
+            artifacts/packages/*.zip
+            artifacts/ios-native-*.xcresult/
           retention-days: 14
 
   desktop:
