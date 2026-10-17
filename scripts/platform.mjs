@@ -24,7 +24,9 @@ for(let attempt=0;attempt<600;attempt++){
 }
 if(!locked)throw new Error('另一个平台构建仍在运行，请稍后重试。');
 process.once('exit',()=>rmSync(lock,{recursive:true,force:true}));
-const cargo=join(homedir(),'.cargo','bin');if(existsSync(cargo))env.PATH=cargo+(process.platform==='win32'?';':':')+env.PATH;
+// Windows commonly exposes `Path`; duplicate PATH/Path keys lose the existing search path in spawn.
+const pathKey=Object.keys(env).find(key=>key.toLowerCase()==='path')||'PATH';
+const cargo=join(homedir(),'.cargo','bin');if(existsSync(cargo))env[pathKey]=cargo+(process.platform==='win32'?';':':')+(env[pathKey]||'');
 function run(command,args,cwd=root){
   const result=spawnSync(command,args,{cwd,env,stdio:'inherit',shell:process.platform==='win32'&&command.endsWith('.cmd')});
   if(result.error)throw result.error;if(result.status!==0)process.exit(result.status||1);

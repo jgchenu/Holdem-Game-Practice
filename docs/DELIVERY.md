@@ -6,7 +6,7 @@
 
 - 独立扑克规则、加密随机洗牌、六人单人练习、主池与边池、七选五比牌、平局分池。
 - 五名只接收可见信息的本地策略对手；不是求解器或大语言模型。
-- 三项入门课程、六道练习、学习进度、本手公开行动复盘。
+- 九课三阶段、十八道练习、学习进度、本手公开行动复盘。
 - 移动端底部操作、加注确认面板、音效、减少动态效果、暂停、刷新恢复。
 - 构建与类型检查通过；9 项规则测试（含 240 局随机策略检查）通过。
 - Chromium 手机/窄屏/桌面与移动尺寸 WebKit 共 24 项浏览器场景通过。
@@ -23,7 +23,8 @@
 
 ## 后续共同功能
 
-- [ ] 新手到进阶的完整课程、应用试炼与突破反馈。
+- [x] 新手到进阶九课、逐境解锁与进度恢复。
+- [ ] 使用真实决策场景的应用试炼与突破反馈。
 - [ ] 有明确事实边界的 AI 师父服务接入、异常回退及凭据配置。
 - [ ] 各平台可靠存储、后台恢复、音频与窗口/触控适配。
 - [ ] Web 离线体验与安装体验。
@@ -41,7 +42,7 @@
 - `npm run test:android`：1 / 1 通过，模拟器 API 36，报告在 `android/app/build/reports/androidTests/connected/debug/`，日志 `artifacts/android-instrumentation.log`。这是 Activity 重建恢复，不冒充进程被系统杀死的验证。
 - `npm run build:ios`：无签名模拟器构建通过。模拟器截图 `artifacts/ios-native-playing.png`、`artifacts/ios-restored.png`。
 - `npm run build:desktop`：生成 Apple Silicon `.app` 与 `.dmg`，当前本地包没有开发者签名或公证。采用 [Tauri 后台节流配置](https://v2.tauri.app/reference/config/#windowconfig) 后，已实际复验：恢复存档继续到翻牌，动作和画面一致；截图 `artifacts/macos-native-playing.png`。
-- `artifacts/android-native-latest.png`：实际 Android 原生页面；状态栏图标对比度问题已发现，修复待验。
+- `artifacts/android-native-latest.png`：实际 Android 原生页面；通过 Capacitor 内置 SystemBars 配置固定深色背景的浅色图标，已重新构建、安装并查看截图确认对比度修复。
 - 原生测试构建曾因并行同步目录冲突失败；已加入构建锁。随后根 Gradle 测试任务误运行依赖库旧测试，出现 Kotlin 冲突；改为 `:app:connectedDebugAndroidTest` 后通过。没有把失败尝试计为通过。
 
 ## 可重复构建

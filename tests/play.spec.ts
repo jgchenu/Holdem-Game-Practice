@@ -124,6 +124,8 @@ test("三项修炼、答错重试、进度保存与短屏操作区可见", async
   await page.goto("/");
   await expect(page.locator("#start")).toBeEnabled();
   await page.locator("#study").click();
+  await expect(page.locator('[data-lesson="3"]')).toBeDisabled();
+  await expect(page.locator('[data-lesson="6"]')).toBeDisabled();
   for (const [index, answers] of [
     [0, [1, 2]],
     [1, [0, 1]],
@@ -142,10 +144,10 @@ test("三项修炼、答错重试、进度保存与短屏操作区可见", async
   }
   await expect(page.locator("#study-dialog")).toContainText("筑基 · 入门");
   await page.getByRole("button", { name: "关闭修炼" }).click();
-  await expect(page.locator("#progress")).toHaveText("3/3");
+  await expect(page.locator("#progress")).toHaveText("3/9");
   await page.reload();
   await expect(page.locator("#start")).toBeEnabled();
-  await expect(page.locator("#progress")).toHaveText("3/3");
+  await expect(page.locator("#progress")).toHaveText("3/9");
   await page.setViewportSize({ width: 320, height: 568 });
   const startButton = await page.locator("#start").boundingBox();
   expect(startButton!.height).toBeGreaterThanOrEqual(44);
@@ -155,4 +157,31 @@ test("三项修炼、答错重试、进度保存与短屏操作区可见", async
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+});
+
+test("九课逐境解锁，进阶练习和满境进度可恢复", async ({page}, info) => {
+  test.skip(!["mobile", "mobile-webkit"].includes(info.project.name), "Progression exercised on both mobile browser engines");
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await page.goto('/');
+  await expect(page.locator('#start')).toBeEnabled();
+  await page.locator('#study').click();
+  const answers = [[1,2],[0,1],[2,1],[0,1],[1,1],[1,1],[1,1],[0,1],[1,1]];
+  for(let index=0;index<answers.length;index++) {
+    await expect(page.locator(`[data-lesson="${index}"]`)).toBeEnabled();
+    await page.locator(`[data-lesson="${index}"]`).click();
+    for(const answer of answers[index]) {
+      await page.locator(`[data-answer="${answer}"]`).click();
+      await expect(page.locator('#quiz-feedback')).toContainText('答对了');
+      await page.locator('#quiz-next').click();
+    }
+    if(index<5) await expect(page.locator('[data-lesson="6"]')).toBeDisabled();
+  }
+  await expect(page.locator('.realm-progress')).toContainText('金丹 · 圆满');
+  await page.screenshot({path:`artifacts/learning-${info.project.name}.png`, fullPage:true});
+  await page.getByRole('button',{name:'关闭修炼',exact:true}).click();
+  await page.reload();
+  await expect(page.locator('#progress')).toHaveText('9/9');
+  await page.locator('#study').click();
+  await expect(page.locator('[data-lesson="8"]')).toBeEnabled();
+  await expect(page.locator('.realm-progress')).toContainText('金丹 · 圆满');
 });

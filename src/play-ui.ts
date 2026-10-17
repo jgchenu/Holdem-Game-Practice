@@ -11,7 +11,7 @@ import {
 import { cardText } from "./core/cards";
 import { chooseAction } from "./core/bot";
 import { loadSession, saveSession, nextHand } from "./session";
-import { lessons, loadLearning, saveLearning } from "./learning";
+import { lessons, learningStages, learningRealm, isLessonUnlocked, loadLearning, saveLearning } from "./learning";
 import { guidance } from "./coach";
 import "./play.css";
 import { flushStorage,storageHealthy } from './storage';
@@ -164,10 +164,10 @@ function updateUI() {
     : saved.corrupt && !hand
       ? "旧记录无法读取，请重新入席"
       : "当前浏览器无法保存，请保持页面开启";
-  get("progress").textContent = `${learned.length}/3`;
+  get("progress").textContent = `${learned.length}/${lessons.length}`;
   button("study").setAttribute(
     "aria-label",
-    `进入修炼阁，已完成${learned.length}项，共3项`,
+    `进入修炼阁，已完成${learned.length}项，共${lessons.length}项`,
   );
   const legal = view?.legal;
   button("fold").disabled = !heroTurn;
@@ -456,12 +456,13 @@ let lessonIndex: number | null = null,
 function lessonList() {
   lessonIndex = null;
   get("study-body").innerHTML =
-    `<p class="study-intro">${learned.length === 3 ? "筑基入门已解锁。继续在牌桌上练习，或重温任一课程。" : "每次练一点，先看懂，再上桌。完成三项入门练习，点亮筑基。"}</p><div class="realm-progress"><span>${learned.length === 3 ? "筑基 · 入门" : "炼气 · 识牌"}</span><span>${learned.length} / 3</span></div>${lessons.map((lesson, i) => `<button class="lesson-card" data-lesson="${i}"><span class="lesson-number">${["壹", "贰", "叁"][i]}</span><span><strong>${lesson.title}</strong><small>${lesson.subtitle} · 2 道练习</small></span><span class="lesson-status">${learned.includes(lesson.id) ? "已完成 ✓" : "修炼 →"}</span></button>`).join("")}<p class="dialog-footnote">师父使用预设讲解。课程完成表示你做过这些练习，不是完整实力评级。</p>`;
+    `<p class="study-intro">每次练一点，先看懂，再上桌。完成当前境界三课，开启下一境。</p><div class="realm-progress"><span>${learningRealm(learned)}</span><span>${learned.length} / ${lessons.length}</span></div>${learningStages.map((stage, n) => `<section class="learning-stage"><h3 class="section-label">${stage.title}<small>${stage.detail}</small></h3>${lessons.map((lesson, i) => lesson.stage !== n ? "" : `<button class="lesson-card" data-lesson="${i}" ${isLessonUnlocked(i, learned) ? "" : "disabled"}><span class="lesson-number">${["壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"][i]}</span><span><strong>${lesson.title}</strong><small>${lesson.subtitle} · ${lesson.questions.length} 道练习</small></span><span class="lesson-status">${learned.includes(lesson.id) ? "已完成 ✓" : isLessonUnlocked(i, learned) ? "修炼 →" : "待突破"}</span></button>`).join("")}</section>`).join("")}<p class="dialog-footnote">境界只表示本设备的课程进度。练习使用预设讲解，不是对实战能力的评级。</p>`;
   get("study-body")
     .querySelectorAll<HTMLButtonElement>("[data-lesson]")
     .forEach((el) =>
       el.addEventListener("click", () => {
         lessonIndex = Number(el.dataset.lesson);
+        if (!isLessonUnlocked(lessonIndex, learned)) return;
         questionIndex = 0;
         renderQuestion();
       }),
@@ -472,7 +473,7 @@ function renderQuestion() {
     question = lesson.questions[questionIndex];
   answered = false;
   get("study-body").innerHTML =
-    `<button id="lesson-back" class="text-button">← 返回修炼阁</button><p class="quiz-count">${lesson.title} · ${questionIndex + 1} / 2</p><h3 class="quiz-prompt">${question.prompt}</h3><div class="quiz-options">${question.choices.map((choice, i) => `<button data-answer="${i}"><span>${["甲", "乙", "丙"][i]}</span>${choice}</button>`).join("")}</div><p id="quiz-feedback" class="quiz-feedback" role="status"></p><button id="quiz-next" class="primary-button sheet-confirm" hidden>${questionIndex === 0 ? "继续修炼 →" : "完成修炼 ✓"}</button>`;
+    `<button id="lesson-back" class="text-button">← 返回修炼阁</button><p class="quiz-count">${lesson.title} · ${questionIndex + 1} / ${lesson.questions.length}</p><h3 class="quiz-prompt">${question.prompt}</h3><div class="quiz-options">${question.choices.map((choice, i) => `<button data-answer="${i}"><span>${["甲", "乙", "丙"][i]}</span>${choice}</button>`).join("")}</div><p id="quiz-feedback" class="quiz-feedback" role="status"></p><button id="quiz-next" class="primary-button sheet-confirm" hidden>${questionIndex < lesson.questions.length - 1 ? "继续修炼 →" : "完成修炼 ✓"}</button>`;
   button("lesson-back").addEventListener("click", lessonList);
   get("study-body")
     .querySelectorAll<HTMLButtonElement>("[data-answer]")
@@ -495,7 +496,7 @@ function renderQuestion() {
     );
   button("quiz-next").addEventListener("click", () => {
     if (!answered) return;
-    if (questionIndex === 0) {
+    if (questionIndex < lesson.questions.length - 1) {
       questionIndex++;
       renderQuestion();
     } else {
