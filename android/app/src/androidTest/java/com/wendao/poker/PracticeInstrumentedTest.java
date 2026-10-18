@@ -1,0 +1,229 @@
+package com.wendao.poker;
+
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import android.os.SystemClock;
+import android.view.InputDevice;
+import android.view.MotionEvent;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.json.JSONArray;
+import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
+
+/** Runs against the installed native WebView and Preferences bridge, not a desktop browser. */
+@RunWith(AndroidJUnit4.class)
+public class PracticeInstrumentedTest {
+    private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+    private MainActivity activity;
+
+    private void launch() {
+        Intent intent = new Intent(instrumentation.getTargetContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        activity = (MainActivity) instrumentation.startActivitySync(intent);
+    }
+
+    private String js(String script) throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        AtomicReference<String> value = new AtomicReference<>();
+        instrumentation.runOnMainSync(() -> activity.getBridge().getWebView().evaluateJavascript(script, result -> {
+            value.set(result); done.countDown();
+        }));
+        assertTrue("WebView JavaScript callback timed out", done.await(5, TimeUnit.SECONDS));
+        return value.get();
+    }
+
+    private void until(String predicate) throws Exception {
+        long deadline = System.currentTimeMillis() + 20000;
+        while (System.currentTimeMillis() < deadline) {
+            if ("true".equals(js("Boolean(" + predicate + ")"))) return;
+            Thread.sleep(60);
+        }
+        System.out.println("WENDAO_NATIVE_FAILURE " + js("JSON.stringify({touch:window.__nativeTouch,events:window.__nativeTouchEvents,viewport:[innerWidth,innerHeight,devicePixelRatio,visualViewport?.offsetTop],inert:document.querySelector('#app')?.inert,dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.id)})"));
+        fail("Native WebView condition timed out: " + predicate);
+    }
+
+    private void idle() throws Exception {
+        until("document.querySelector('#live-table')?.dataset.busy === 'false'");
+    }
+
+    /** Dispatch an actual touchscreen down/up through Android, never DOM click(). */
+    private void tap(String selector) throws Exception {
+        String quoted = org.json.JSONObject.quote(selector);
+        until("!document.querySelector('#app').inert && (()=>{const b=document.querySelector(" + quoted + ");return b && !b.disabled})()");
+        js("window.__nativeTouch=null;window.__nativeTouchEvents=[];if(!window.__nativeTouchTracking){for(const type of ['pointerdown','pointerup','pointercancel','click'])document.addEventListener(type,e=>{const b=e.target.closest('button');const entry={type,trusted:e.isTrusted,target:b?.id||b?.className||e.target.tagName,x:e.clientX,y:e.clientY,at:performance.now()};window.__nativeTouchEvents.push(entry);if(window.__nativeTouchEvents.length>20)window.__nativeTouchEvents.shift();if(type==='click')window.__nativeTouch={trusted:e.isTrusted,target:b?.id}},true);window.__nativeTouchTracking=true}");
+        JSONArray box = new JSONArray(js("(()=>{const r=document.querySelector(" + quoted + ").getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2,innerWidth,innerHeight]})()"));
+        double x = box.getDouble(0), y = box.getDouble(1), width = box.getDouble(2), height = box.getDouble(3);
+        assertTrue("Touch target must already be in the visible viewport", x > 0 && x < width && y > 0 && y < height);
+        int[] origin = new int[2];
+        AtomicReference<Float> scale = new AtomicReference<>();
+        instrumentation.runOnMainSync(() -> {
+            activity.getBridge().getWebView().getLocationOnScreen(origin);
+            scale.set((float) (activity.getBridge().getWebView().getWidth() / width));
+        });
+        float screenX = origin[0] + (float) x * scale.get(), screenY = origin[1] + (float) y * scale.get();
+        long down = SystemClock.uptimeMillis();
+        MotionEvent press = MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, screenX, screenY, 0);
+        press.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        // Queue both hardware events independently of WebView event handling.
+        // sendPointerSync can block after DOWN and turn a short tap into a
+        // long press on a busy/software-rendered emulator.
+        try { assertTrue(instrumentation.getUiAutomation().injectInputEvent(press, false)); } finally { press.recycle(); }
+        SystemClock.sleep(60);
+        MotionEvent release = MotionEvent.obtain(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, screenX, screenY, 0);
+        release.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        try { assertTrue(instrumentation.getUiAutomation().injectInputEvent(release, false)); } finally { release.recycle(); }
+        instrumentation.waitForIdleSync();
+        System.out.println("WENDAO_NATIVE_TOUCH " + quoted + " " + js("JSON.stringify({touch:window.__nativeTouch,events:window.__nativeTouchEvents,rect:(()=>{const r=document.querySelector(" + quoted + ").getBoundingClientRect();return [r.x,r.y,r.width,r.height]})(),viewport:[innerWidth,innerHeight,devicePixelRatio,visualViewport?.offsetTop]})"));
+    }
+
+    private void learnBeginnerSteps() throws Exception {
+        js("document.querySelector('#tutorial-open').click()");
+        until("document.querySelector('#tutorial-next') && !document.querySelector('#tutorial-next').disabled");
+        js("document.querySelector('#tutorial-next').click()");
+        until("document.querySelector('#tutorial-step-title').textContent.includes('两张底牌') && !document.querySelector('#tutorial-next').disabled");
+        js("document.querySelector('#tutorial-hole').click()");
+        until("document.querySelector('#tutorial-step-title').textContent.includes('字和图案') && !document.querySelector('#tutorial-next').disabled");
+        js("document.querySelector('.hand-guide > summary').click()");
+        assertEquals("true", js("document.querySelector('.hand-guide').open && document.querySelectorAll('.hand-guide-list > li').length === 9 && document.querySelectorAll('.hand-guide-cards .trial-card').length === 45"));
+        js("document.querySelector('[data-hand-category=\"1\"] .hand-guide-compare > summary').click()");
+        assertEquals("true", js("document.querySelector('[data-hand-category=\"1\"] .hand-guide-compare').open"));
+        assertEquals("{\"step\":2}", instrumentation.getTargetContext().getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:onboarding:v1", null));
+        js("document.querySelector('.hand-guide > summary').click()");
+        js("document.querySelector('#tutorial-next').click()");
+        until("document.querySelector('#tutorial-step-title').textContent.includes('灵石池') && !document.querySelector('#tutorial-next').disabled");
+        assertEquals("{\"step\":3}", instrumentation.getTargetContext().getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:onboarding:v1", null));
+        js("document.querySelector('#tutorial-dialog').close()");
+    }
+
+    private void verifyBeginnerStep() throws Exception {
+        js("document.querySelector('#tutorial-open').click()");
+        until("document.querySelector('#tutorial-step-title')?.textContent.includes('灵石池')");
+        js("document.querySelector('#tutorial-dialog').close()");
+    }
+
+    private void requireEmulator() {
+        // This test owns emulator data only; never overwrite a person's practice session on a phone.
+        assumeTrue("Isolated native tests require an emulator", Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk") || Build.PRODUCT.contains("sdk"));
+    }
+
+    @Test public void prepareForHostProcessDeath() throws Exception {
+        assumeTrue("Host-orchestrated phase only", "prepare-process-death".equals(InstrumentationRegistry.getArguments().getString("phase")));
+        requireEmulator();
+        Context context = instrumentation.getTargetContext();
+        context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).edit()
+            .putString("wendao:practice:v1", "null")
+            .putString("wendao:preferences:v1", "{\"sound\":false,\"reducedMotion\":true,\"quality\":\"balanced\"}")
+            .putString("wendao:learning:v1", "[\"ranks\",\"actions\",\"position\"]")
+            .putString("wendao:onboarding:v1", "{\"step\":0}")
+            .putString("wendao:trials:v1", "[]").commit();
+        launch();
+        try {
+            until("document.querySelector('#start') && !document.querySelector('#start').disabled");
+            js("document.querySelector('#start').click()"); idle();
+            until("document.querySelector('#live-table').dataset.actor === '0'");
+            js("document.querySelector('#study').click();document.querySelector('[data-trial=free-check]').click();document.querySelector('#trial-call').click()");
+            until("document.querySelector('#trial-feedback').classList.contains('passed') && !document.querySelector('#trial-done').disabled");
+            js("document.querySelector('#study-dialog').close()");
+            learnBeginnerSteps();
+            String snapshot = js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent})");
+            assertTrue(context.getSharedPreferences("LifecycleTestExpected", Context.MODE_PRIVATE).edit().putString("snapshot", snapshot).commit());
+            assertTrue(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:trials:v1", "").contains("free-check"));
+        } finally { instrumentation.runOnMainSync(() -> activity.finish()); }
+    }
+
+    @Test public void restoreAfterHostProcessDeath() throws Exception {
+        assumeTrue("Host-orchestrated phase only", "restore-process-death".equals(InstrumentationRegistry.getArguments().getString("phase")));
+        requireEmulator();
+        String expected = instrumentation.getTargetContext().getSharedPreferences("LifecycleTestExpected", Context.MODE_PRIVATE).getString("snapshot", null);
+        assertNotNull("The preparation phase must have saved its expected state", expected);
+        launch();
+        try {
+            idle(); until("document.querySelector('#resume') && !document.querySelector('#resume').hidden");
+            verifyBeginnerStep();
+            assertEquals(expected, js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent})"));
+            js("document.querySelector('#study').click()");
+            until("document.querySelector('[data-trial=free-check]').textContent.includes('已达成')");
+        } finally { instrumentation.runOnMainSync(() -> activity.finish()); }
+    }
+
+    @Test public void nativeGameplayPersistsAcrossActivityRecreation() throws Exception {
+        requireEmulator();
+        Context context = instrumentation.getTargetContext();
+        context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).edit()
+            .putString("wendao:practice:v1", "null")
+            .putString("wendao:preferences:v1", "{\"sound\":false,\"reducedMotion\":true,\"quality\":\"balanced\"}")
+            .putString("wendao:learning:v1", "[\"ranks\",\"actions\",\"position\"]")
+            .putString("wendao:onboarding:v1", "{\"step\":0}")
+            .putString("wendao:trials:v1", "[]")
+            .commit();
+        launch();
+        try {
+            until("document.querySelector('#start') && !document.querySelector('#start').disabled");
+            tap("#learn-start");
+            until("document.querySelector('#tutorial-dialog').open");
+            assertEquals("true", js("window.__nativeTouch.trusted && window.__nativeTouch.target === 'learn-start'"));
+            tap("#tutorial-dialog .close-button");
+            until("!document.querySelector('#tutorial-dialog').open");
+            tap("#start");
+            assertEquals("true", js("window.__nativeTouch.trusted && window.__nativeTouch.target === 'start'"));
+            idle();
+            until("document.querySelector('#live-table').dataset.actor === '0'");
+            assertEquals("true", js("document.querySelector('#call').getBoundingClientRect().bottom <= innerHeight"));
+            learnBeginnerSteps();
+            String before = js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent})");
+            assertNotNull(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:practice:v1", null));
+
+            js("document.querySelector('#study').click();document.querySelector('[data-trial=free-check]').click()");
+            until("document.querySelector('#trial-call')");
+            js("document.querySelector('#trial-call').click()");
+            until("document.querySelector('#trial-feedback').classList.contains('passed') && !document.querySelector('#trial-done').disabled");
+            assertTrue(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:trials:v1", "").contains("free-check"));
+            js("document.querySelector('#study-dialog').close()");
+
+            instrumentation.runOnMainSync(() -> activity.finish());
+            instrumentation.waitForIdleSync();
+            launch();
+            idle();
+            until("document.querySelector('#resume') && !document.querySelector('#resume').hidden");
+            verifyBeginnerStep();
+            assertEquals(before, js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent})"));
+            js("document.querySelector('#study').click()");
+            until("document.querySelector('[data-trial=free-check]').textContent.includes('已达成')");
+            js("document.querySelector('#study-dialog').close()");
+            js("document.querySelector('#resume').click()"); idle();
+            until("!document.querySelector('#raise').disabled");
+            tap("#raise");
+            assertEquals("true", js("window.__nativeTouch.trusted && window.__nativeTouch.target === 'raise'"));
+            until("document.querySelector('#raise-dialog').open");
+            assertEquals("true", js("document.querySelector('#raise-confirm').getBoundingClientRect().bottom <= innerHeight"));
+            js("document.querySelector('#raise-dialog').close()");
+            // The remainder of the hand also exercises the full animation path in the native WebView.
+            js("document.querySelector('#settings').click();document.querySelector('#motion-toggle').click();document.querySelector('#settings-dialog').close()");
+            int actions = 0;
+            while (!"\"complete\"".equals(js("document.querySelector('#live-table').dataset.street"))) {
+                assertTrue("Practice hand must terminate", ++actions < 40);
+                until("!document.querySelector('#call').disabled");
+                js("document.querySelector('#call').click()"); idle();
+            }
+            js("document.querySelector('#review').click()");
+            until("document.querySelector('#review-dialog').open");
+            assertEquals("true", js("document.querySelectorAll('.action-history li').length > 0"));
+            js("document.querySelector('#review-dialog').close();document.querySelector('#coach-open').click()");
+            until("document.querySelector('#coach-dialog').open");
+            assertEquals("true", js("document.querySelectorAll('#coach-facts dd').length === 4"));
+            js("document.querySelector('[data-coach-topic=price]').click()");
+            until("document.querySelector('#coach-source').textContent.includes('本地指引')");
+        } finally {
+            instrumentation.runOnMainSync(() -> activity.finish());
+        }
+    }
+}

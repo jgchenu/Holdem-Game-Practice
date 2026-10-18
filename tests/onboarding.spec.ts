@@ -1,0 +1,146 @@
+import { test, expect } from '@playwright/test';
+
+test('完全新手可从入口完成逐步带练，看到3/1/1发牌与最强五张，恢复教学进度', async ({ page }, info) => {
+  if (info.project.name === 'small-mobile') await page.setViewportSize({width:320,height:568});
+  await page.goto('/');
+  await expect(page.locator('#learn-start')).toHaveText('从零学德州 →');
+  await page.locator('#learn-start').click();
+  await expect(page.locator('#tutorial-dialog')).toBeVisible();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('先别急着上桌');
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-hole .trial-card')).toHaveCount(2);
+  await page.locator('#tutorial-hole').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('牌上的字和图案怎么看');
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('.tutorial-table')).toContainText('60');
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-next')).toContainText('过牌');
+  await page.screenshot({path:`artifacts/onboarding-check-${info.project.name}.png`});
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-board .trial-card')).toHaveCount(3);
+  await page.locator('#tutorial-board').click();
+  await expect(page.locator('#tutorial-next')).toContainText('跟注 · 补 20');
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-board .trial-card')).toHaveCount(4);
+  await expect(page.locator('#tutorial-next')).toContainText('加注到 40');
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-board .trial-card')).toHaveCount(5);
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('.tutorial-best')).toHaveCount(5);
+  await expect(page.locator('.tutorial-five')).toContainText('最终使用的五张牌');
+  await expect(page.locator('.hand-guide')).toHaveAttribute('open','');
+  await expect(page.locator('#tutorial-board .trial-card').last()).toHaveCSS('opacity','1');
+  await page.screenshot({path:`artifacts/onboarding-five-${info.project.name}.png`});
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-next')).toContainText('弃牌');
+  const cta=await page.locator('#tutorial-next').boundingBox();
+  expect(cta!.height).toBeGreaterThanOrEqual(44);
+  expect(cta!.y+cta!.height).toBeLessThanOrEqual(page.viewportSize()!.height-8);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('第一手，已经看懂了');
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-dialog')).not.toBeVisible();
+  await expect(page.locator('#wallet')).toHaveText('1,000');
+  await expect(page.locator('#live-table')).toHaveAttribute('data-street','ready');
+  await page.locator('#tutorial-open').click();
+  await page.locator('#tutorial-replay').click();
+  await page.locator('#tutorial-next').click();
+  await page.getByRole('button',{name:'关闭新手教学'}).click();
+  await page.reload();
+  await page.locator('#tutorial-open').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('先认识你的两张底牌');
+});
+
+test('新手可看九种牌型示例与比牌说明，小屏滚动保留继续按钮且不改存档', async ({page}, info) => {
+  if (info.project.name === 'small-mobile') await page.setViewportSize({width:320,height:568});
+  await page.goto('/');
+  await page.locator('#learn-start').click();
+  await page.locator('#tutorial-next').click();
+  await page.locator('#tutorial-hole').click();
+  const progress = await page.evaluate(() => localStorage.getItem('wendao:onboarding:v1'));
+  const guide = page.locator('.hand-guide');
+  await guide.locator(':scope > summary').click();
+  await expect(guide.locator('.hand-guide-list > li')).toHaveCount(9);
+  await expect(guide.locator('.trial-card')).toHaveCount(45);
+  for (const category of [8,7,6,5,4,3,2,1,0]) {
+    const entry = guide.locator(`[data-hand-category="${category}"]`);
+    await entry.locator('h4').scrollIntoViewIfNeeded();
+    await expect(entry.locator('.trial-card')).toHaveCount(5);
+    const row = await entry.locator('.hand-guide-cards').boundingBox();
+    const lastCard = await entry.locator('.trial-card').last().boundingBox();
+    expect(lastCard!.x + lastCard!.width).toBeLessThanOrEqual(row!.x + row!.width);
+    const cta = await page.locator('#tutorial-next').boundingBox();
+    await expect(page.locator('#tutorial-next')).toBeInViewport({ratio:1});
+    expect(cta!.y).toBeGreaterThanOrEqual(0);
+    expect(cta!.y + cta!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
+  }
+  const pair = guide.locator('[data-hand-category="1"]');
+  await pair.getByText('同牌型怎么比？',{exact:true}).click();
+  await expect(pair).toContainText('一对 K 大过一对 Q');
+  await expect(pair.locator('.hand-guide-key')).toHaveCount(2);
+  // Position the example within its own scroll area; scrolling the entire dialog
+  // with DOM scrollIntoView would also move its overflow-hidden ancestors.
+  await page.locator('.tutorial-scroll').evaluate(el => {
+    const title = el.querySelector('[data-hand-category="1"] h4')!;
+    el.scrollTop += title.getBoundingClientRect().top - el.getBoundingClientRect().top - 10;
+  });
+  const pairCta = await page.locator('#tutorial-next').boundingBox();
+  await expect(page.locator('#tutorial-next')).toBeInViewport({ratio:1});
+  expect(pairCta!.y).toBeGreaterThanOrEqual(0);
+  expect(pairCta!.y + pairCta!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
+  await page.screenshot({path:`artifacts/hand-guide-pair-${info.project.name}.png`});
+  const straightFlush = guide.locator('[data-hand-category="8"]');
+  await straightFlush.getByText('同牌型怎么比？',{exact:true}).click();
+  await expect(straightFlush).toContainText('皇家同花顺');
+  await straightFlush.scrollIntoViewIfNeeded();
+  await page.screenshot({path:`artifacts/hand-guide-strongest-${info.project.name}.png`});
+  await guide.locator('.hand-guide-ties').scrollIntoViewIfNeeded();
+  await expect(guide.locator('.hand-guide-ties')).toContainText('不比第六、七张，也不比花色');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(await page.locator('.tutorial-scroll').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => localStorage.getItem('wendao:onboarding:v1'))).toBe(progress);
+  await page.getByRole('button',{name:'关闭新手教学'}).click();
+  await expect(page.locator('#wallet')).toHaveText('1,000');
+  await page.reload();
+  await page.locator('#tutorial-open').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('牌上的字和图案怎么看');
+});
+
+test('教学弹窗位于上下安全区内，关闭按钮触控区域足够', async ({page}) => {
+  await page.goto('/');
+  await page.locator('#learn-start').click();
+  // Exercise the layout with explicit inset values; native safe-area values
+  // are verified separately in XCTest and its actual simulator screenshots.
+  await page.locator('#tutorial-dialog').evaluate(el => {
+    el.style.setProperty('--tutorial-safe-top','62px');
+    el.style.setProperty('--tutorial-safe-bottom','34px');
+  });
+  const dialog = await page.locator('#tutorial-dialog').boundingBox();
+  expect(dialog!.y).toBeGreaterThanOrEqual(62);
+  expect(dialog!.y + dialog!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 34);
+  const close = await page.getByRole('button',{name:'关闭新手教学'}).boundingBox();
+  expect(close!.width).toBeGreaterThanOrEqual(44);
+  expect(close!.height).toBeGreaterThanOrEqual(44);
+});
+
+test('牌局中能找到新手教学，教学暂停并保留原手牌与灵石', async ({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto('/');
+  await expect(page.locator('#start')).toBeEnabled();
+  await page.locator('#start').click();
+  await expect(page.locator('#live-table')).toHaveAttribute('data-busy','false',{timeout:15_000});
+  await expect(page.locator('#live-table')).toHaveAttribute('data-actor','0');
+  const hand=await page.locator('#live-table').getAttribute('aria-label');
+  const wallet=await page.locator('#wallet').textContent();
+  await page.locator('#tutorial-open').click();
+  await page.locator('#tutorial-next').click();
+  await page.getByRole('button',{name:'关闭新手教学'}).click();
+  await expect(page.locator('#resume')).toBeVisible();
+  await expect(page.locator('#live-table')).toHaveAttribute('aria-label',hand!);
+  await expect(page.locator('#wallet')).toHaveText(wallet!);
+  await page.locator('#study').click();
+  await page.locator('#study-beginner').click();
+  await expect(page.locator('#tutorial-dialog')).toBeVisible();
+  await expect(page.locator('#study-dialog')).not.toBeVisible();
+});

@@ -1,0 +1,56 @@
+{
+  "name": "wendao-poker",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build && node scripts/offline.mjs",
+    "preview": "vite preview --host 0.0.0.0",
+    "test:e2e": "playwright test",
+    "test:offline": "npm run build && playwright test --config playwright.offline.config.ts",
+    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "coach:serve": "node --env-file-if-exists=.env --import tsx server/index.ts",
+    "check:server": "tsc --noEmit -p tsconfig.server.json",
+    "native:sync": "node scripts/platform.mjs sync",
+    "build:android": "node scripts/platform.mjs android",
+    "build:ios": "node scripts/platform.mjs ios-sim",
+    "build:ios-device": "node scripts/platform.mjs ios-device",
+    "build:ios-signed": "node scripts/platform.mjs ios-signed",
+    "build:desktop": "node scripts/platform.mjs desktop",
+    "brand": "node scripts/brand.mjs",
+    "test:android": "node scripts/platform.mjs android-test",
+    "test:ios": "node scripts/platform.mjs ios-test",
+    "test:ios:cold": "node scripts/ios-cold-entry.mjs",
+    "test:ios:ordinary": "node scripts/ios-cold-entry.mjs --ordinary",
+    "test:macos:ui": "node scripts/macos-ci-ui.mjs",
+    "audit:ios": "node scripts/platform.mjs ios-audit",
+    "audit:android": "node scripts/platform.mjs android-audit",
+    "build:desktop-audit": "node scripts/platform.mjs desktop-audit",
+    "build:web-audit": "node scripts/web-audit.mjs",
+    "test:desktop": "node scripts/platform.mjs desktop-test"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/splash-screen": "8.0.2",
+    "@tauri-apps/api": "2.12.4",
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@playwright/test": "1.64.1",
+    "@tauri-apps/cli": "2.12.3",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "11.1.1"
+    }
+  }
+}
