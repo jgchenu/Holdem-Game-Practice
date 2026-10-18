@@ -52,8 +52,8 @@ final class PracticeUITests: XCTestCase {
             XCTFail("Only the isolated CI copy may be launched"); return
         }
         let app = XCUIApplication(url: URL(fileURLWithPath: path))
+        addTeardownBlock { await MainActor.run { app.terminate() } }
         app.launch(); app.activate()
-        defer { app.terminate() }
         let entry = button(app, containing: "从零学德州")
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: entry)
         let result = XCTWaiter.wait(for: [ready], timeout: 60)
@@ -90,6 +90,8 @@ final class PracticeUITests: XCTestCase {
         let configFile = root.appendingPathComponent("artifacts/macos-xctest-soak/runtime.json")
         let config = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: configFile)) as? [String: Any])
         let runID = try XCTUnwrap(config["runID"] as? String)
+        let mode = try XCTUnwrap(config["mode"] as? String)
+        guard ["soak", "renderer-probe"].contains(mode) else { XCTFail("Unknown native audit mode"); return }
         guard UUID(uuidString: runID) != nil else { XCTFail("Invalid owned run ID"); return }
         let owned = root.appendingPathComponent("artifacts/macos-soak-target/release/bundle/macos/问道牌途长测.app")
         guard config["application"] as? String == owned.path,
@@ -107,14 +109,60 @@ final class PracticeUITests: XCTestCase {
             XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed, "Host memory sample must complete before the next round")
         }
         let app = XCUIApplication(url: owned)
+        addTeardownBlock { await MainActor.run { app.terminate() } }
         app.launch(); app.activate()
-        defer { app.terminate() }
         let open = button(app, containing: "运行验收")
         let actionable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: open)
         XCTAssertEqual(XCTWaiter.wait(for: [actionable], timeout: 60), .completed)
+        let settings = app.buttons["体验设置"]
+        let interfaceReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: settings)
+        XCTAssertEqual(XCTWaiter.wait(for: [interfaceReady], timeout: 60), .completed, "The main interface must leave its startup input guard before sampling")
         let table = app.images.matching(NSPredicate(format: "label CONTAINS %@", "你的底牌")).firstMatch
-        if table.exists {
+        if table.exists && mode == "soak" {
             XCTAssertGreaterThan(try capturedCardPixels(table), 100, "Saved hand must actually be visible in the native screenshot")
+        }
+        if mode == "renderer-probe" {
+            if !table.exists {
+                let start = button(app, containing: "入席修炼")
+                let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: start)
+                XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 60), .completed)
+                start.click(); XCTAssertTrue(table.waitForExistence(timeout: 20))
+            }
+            let pause = button(app, containing: "暂停")
+            if pause.exists && pause.isEnabled { pause.click() }
+            let bitmap = try XCTUnwrap(NSBitmapImageRep(data: table.screenshot().pngRepresentation))
+            let nativePixels = lightCardPixels(bitmap)
+            let tableFrameBefore = NSStringFromRect(table.frame), appFrameBefore = NSStringFromRect(app.frame)
+            let appStateBefore = app.state.rawValue
+            for (name, screenshot) in [("app-before-render-probe", app.screenshot()), ("screen-before-render-probe", XCUIScreen.main.screenshot())] {
+                let attachment = XCTAttachment(screenshot: screenshot)
+                attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+            }
+            open.click()
+            let probe = button(app, containing: "检查画布渲染")
+            XCTAssertTrue(probe.waitForExistence(timeout: 20)); probe.click()
+            let state = app.staticTexts.matching(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "DRAWSTATE ", "DRAWSTATE ")).firstMatch
+            let observed = state.waitForExistence(timeout: 20)
+            if !observed { print(app.debugDescription) }
+            XCTAssertTrue(observed)
+            let text = [state.value as? String, state.label].compactMap { $0 }.first { $0.contains("DRAWSTATE ") }
+            let start = try XCTUnwrap(text?.range(of: "DRAWSTATE ")?.upperBound)
+            let suffix = try XCTUnwrap(text).suffix(from: start)
+            let end = try XCTUnwrap(suffix.firstIndex(of: "}"))
+            let facts = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(suffix[...end].utf8)) as? [String: Any])
+            let record = XCTAttachment(data: try JSONSerialization.data(withJSONObject: facts), uniformTypeIdentifier: "public.json")
+            record.name = "actual-renderer-probe-facts"; record.lifetime = .keepAlways; add(record)
+            let after = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            after.name = "screen-with-labeled-backbuffer-readback"; after.lifetime = .keepAlways; add(after)
+            button(app, containing: "收起验收").click()
+            let restored = try XCTUnwrap(NSBitmapImageRep(data: table.screenshot().pngRepresentation))
+            let original = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            original.name = "screen-original-canvas-after-readback"; original.lifetime = .keepAlways; add(original)
+            try write("probe.json", ["runID": runID, "facts": facts, "nativeCardPixelsBeforeProbe": nativePixels,
+                "nativeCardPixelsAfterReadback": lightCardPixels(restored), "tableFrameBeforeProbe": tableFrameBefore,
+                "appFrameBeforeProbe": appFrameBefore, "appStateBeforeProbe": appStateBefore])
+            print("Renderer facts collected; does not turn a failed ordinary screenshot into a pass")
+            return
         }
         let initial = XCTAttachment(screenshot: app.screenshot())
         initial.name = "macos-soak-initial-native-window"; initial.lifetime = .keepAlways; add(initial)

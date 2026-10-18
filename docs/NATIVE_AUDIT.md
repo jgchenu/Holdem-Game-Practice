@@ -208,3 +208,11 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 本机单元 38 项通过，含不完整样本、音频未暂停、无新增音频与缺失/无效回调统计的拒绝检查（`artifacts/macos-native-soak-final-unit.log`）；独立驱动 build-only 两次编译通过。实际启动尝试 `2c47bc5f-e105-40cc-b345-c6a899950d25` 在 XCTest 初始化时失败，日志为“认证已取消。System authentication is running.”，随后系统状态实际确认 IOConsoleLocked=true。没有进入测试、没有 baseline 或接受轮次，report.passed=false；受保护 App PID 40880 和二进制哈希前后相同。已请求用户解锁并完成开发工具认证，不自动修改系统安全权限。新驱动运行协议、15 轮采样、最终像素和重启恢复仍待实际验证。
 
 手动工作流新增 `platform=macos` 诊断范围，只启动 Mac 构建和原生测试，便于在本机系统认证未完成时继续核查云端截图；PR/main 仍始终执行原有全部平台，默认手动运行也为全部。当前独立分支的诊断不替代 PR #1 的五平台合并门禁，也不取消正在运行的 iOS 套件。
+
+### 7ca5749 与 f73cb5c：强化像素门禁均复现失败
+
+[39145575343](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39145575343) 和 [39147349513](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39147349513) 均为独立 Mac 专项，其他平台按显式手动范围跳过，不能称为五平台结果。普通首点和手牌状态可操作，但原生手牌区域约 20 秒内持续读取为 0 个浅色卡牌像素，像素断言失败。7ca5749 的延后截图 `artifacts/macos-7ca5749-attachments/EB9ED454-09CD-46BE-96E9-D553596301B6.png` 已实际检查，画布为空；f73cb5c 补充 app.activate() 后仍失败（`artifacts/macos-f73cb5c-job.log`），未将置前视为已修复。
+
+新增只在 audit/dev 中使用的按需帧缓冲诊断：通过现有 Phaser renderer.snapshot 读取真实渲染后的缓冲区，报告像素、CSS/父容器尺寸、场景状态、可见性及上下文；另存 App 和整个原生屏幕截图。诊断读取图明确标注“不是原生屏幕截图”，其非空不自动视为屏幕已呈现。读取仅在点击时执行，连续验收期间禁用；不在真实采样窗口调用 GPU readPixels。普通生产 index.html/assets 的 17 个文件与实测 main13 仍逐字节相同。实际浏览器诊断及既有诊断回归共 16 项通过（含移动 WebKit、320px），手牌和灵石保持不变；日志 `artifacts/macos-renderer-readback-final-browser.log`，字节核对 `artifacts/macos-renderer-readback-final-parity.json`。
+
+原生诊断宏编译通过。实际尝试复用旧 App 被游戏输入差异检查在启动 XCTest 前拒绝，受保护审计 App 的 PID/哈希未变（`artifacts/macos-renderer-readback-source-guard.log`）。CI 仅在普通 Mac 原生检查失败后构建新的独立诊断 App 并收集 `--render-probe`；该收集步骤不把原有失败转为成功。新的配对 Mac 屏幕/帧缓冲结果仍待实际运行。

@@ -1,3 +1,4 @@
+import { setDiagnosticText } from './diagnostic-text';
 import Phaser from "phaser";
 import { LiveScene } from "./live-scene";
 import { readPreferences, savePreferences } from "./preferences";
@@ -123,6 +124,73 @@ const game = new Phaser.Game({
   fps: { target: 60, forceSetTimeOut: false },
   scene,
 });
+function rendererSurfaceFacts(): Record<string, string | number | boolean> {
+  const canvas = game.canvas, bounds = canvas.getBoundingClientRect(), style = getComputedStyle(canvas);
+  const parent = canvas.parentElement?.getBoundingClientRect();
+  const gl = game.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer ? game.renderer.gl : null;
+  const debug = gl?.getExtension("WEBGL_debug_renderer_info");
+  return {
+    canvasWidth: canvas.width, canvasHeight: canvas.height, parentWidth: parent?.width ?? -1, parentHeight: parent?.height ?? -1,
+    cssX: bounds.x, cssY: bounds.y, cssWidth: bounds.width, cssHeight: bounds.height,
+    display: style.display, visibility: style.visibility, opacity: style.opacity,
+    hidden: document.hidden, focused: document.hasFocus(), frame: game.loop.frame, rendererType: game.renderer.type,
+    bootPhase: document.querySelector<HTMLElement>("#app")?.dataset.bootPhase ?? "unknown",
+    sceneActive: scene.sys.isActive(), sceneVisible: scene.sys.isVisible(), sceneChildren: scene.children.list.length,
+    drawingBufferWidth: gl?.drawingBufferWidth ?? canvas.width, drawingBufferHeight: gl?.drawingBufferHeight ?? canvas.height,
+    contextLost: gl?.isContextLost() ?? false,
+    renderer: gl ? String(gl.getParameter(debug?.UNMASKED_RENDERER_WEBGL ?? gl.RENDERER)) : "Canvas 2D",
+  };
+}
+
+// Opt-in audit reads the existing renderer after it draws; this is not a screen capture.
+function captureRendererProbe() {
+  return new Promise<{imageURL: string; facts: Record<string, string | number | boolean>}>((resolve, reject) => {
+    if (import.meta.env.VITE_NATIVE_AUDIT !== "1" && !import.meta.env.DEV) { reject(new Error("Renderer probe requires an audit build")); return; }
+    const renderer = game.renderer;
+    const timeout = setTimeout(() => {
+      // Phaser clears this callback to null at runtime; its public type omits null.
+      if (renderer.snapshotState.callback === capture) Reflect.set(renderer.snapshotState, "callback", null);
+      reject(new Error("No renderer snapshot within 5 seconds"));
+    }, 5000);
+    const capture = (image: HTMLImageElement | Phaser.Display.Color) => {
+      clearTimeout(timeout);
+      try {
+        if (!(image instanceof HTMLImageElement)) throw new Error("Renderer did not return an image");
+        const analysis = document.createElement("canvas");
+        analysis.width = image.naturalWidth; analysis.height = image.naturalHeight;
+        const context = analysis.getContext("2d", {willReadFrequently: true});
+        if (!context) throw new Error("Snapshot analysis context unavailable");
+        context.drawImage(image, 0, 0);
+        const {width, height} = analysis, data = context.getImageData(0, 0, width, height).data;
+        let nonTransparent = 0, lightCardPixels = 0;
+        for (let y = 0; y < height; y += 2) for (let x = 0; x < width; x += 2) {
+          const i = (y * width + x) * 4;
+          if (data[i + 3] > 0) nonTransparent++;
+          if (x >= width * .2 && x < width * .8 && y >= height * .64 && y < height * .95 && data[i + 3] > 230 && data[i] > 199 && data[i + 1] > 183 && data[i + 2] > 127) lightCardPixels++;
+        }
+        resolve({imageURL: image.src, facts: {...rendererSurfaceFacts(), width, height, nonTransparent, lightCardPixels}});
+      } catch (error) { reject(error); }
+    };
+    try { renderer.snapshot(capture); } catch (error) { clearTimeout(timeout); reject(error); }
+  });
+}
+
+if (import.meta.env.VITE_NATIVE_AUDIT === "1" || import.meta.env.DEV) {
+  listen(document, "click", event => {
+    const probe = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("#audit-render-probe") : null;
+    const run = document.querySelector<HTMLButtonElement>("#audit-run");
+    if (!probe || probe.disabled || run?.disabled) return;
+    probe.disabled = true; if (run) run.disabled = true;
+    const state = document.querySelector<HTMLElement>("#audit-render-state")!;
+    void captureRendererProbe().then(captured => {
+      setDiagnosticText(state, "DRAWSTATE " + JSON.stringify(captured.facts));
+      const image = document.querySelector<HTMLImageElement>("#audit-render-image")!;
+      image.src = captured.imageURL; image.hidden = false;
+    }).catch(error => setDiagnosticText(state, "DRAWSTATE " + JSON.stringify({...rendererSurfaceFacts(), error: String(error)})))
+      .finally(() => { probe.disabled = false; if (run) run.disabled = false; });
+  });
+}
+
 // Dispose the failed renderer as well as showing the recovery screen. Scene
 // destruction also releases its audio/lifecycle listeners before a retry.
 void practiceReady.catch(() => { disposePractice(); });

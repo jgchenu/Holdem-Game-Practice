@@ -122,8 +122,14 @@ jobs:
       - run: npm run build:desktop
       - run: npm run test:desktop
       - name: Verify ordinary macOS native first entry
+        id: macos_ordinary
         if: runner.os == 'macOS'
         run: npm run test:macos:ui
+      - name: Collect isolated renderer evidence after a native visual failure
+        if: runner.os == 'macOS' && failure() && steps.macos_ordinary.outcome == 'failure'
+        run: |
+          node scripts/prepare-macos-soak.mjs
+          node scripts/macos-runtime-soak.mjs --render-probe
       - name: Match WebView2 driver and install our NSIS package
         if: runner.os == 'Windows'
         shell: pwsh
@@ -155,4 +161,9 @@ jobs:
             artifacts/macos-ci-ui/result.json
             artifacts/macos-ci-ui/runtime.json
             artifacts/macos-ui-*.xcresult/
+            artifacts/macos-extended-soak/build.json
+            artifacts/macos-xctest-soak/*/report.json
+            artifacts/macos-xctest-soak/*/probe.json
+            artifacts/macos-xctest-soak/*/run.log
+            artifacts/macos-xctest-soak/*/native.xcresult/
           retention-days: 14

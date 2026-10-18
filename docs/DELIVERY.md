@@ -22,15 +22,25 @@
 
 | 平台 | 工程与构建 | 实际运行和功能证据 | 仍待验收 |
 | --- | --- | --- | --- |
-| Web | 43ab4f4 生产候选已生成 | 云端浏览器 104 项通过、4 项按平台跳过，离线 6 项、单元 37 项通过；新的紧凑诊断相关浏览器 16 项通过。历史 15 轮观测保留各自源码范围 | 手机主屏幕安装与硬件性能未测；有限采样不证明没有泄漏 |
-| iOS | 普通模拟器及未签名设备工程可构建；测试记录器只在测试包中 | 43ab4f4 云端启动就绪 AX 查询超时，未执行首次教学点击；另两项功能通过、1 项跳过，原生记录导出成功。新紧凑诊断保留原 ready/inert 条件与 60 秒预算，本机三套共 9 项功能通过、3 项跳过 | 新提交的云端三套门禁待验；不能用事后 ready 快照把原超时判为通过。签名与手机硬件为额外未测范围 |
-| Android | 43ab4f4 API 36 / JDK 21 调试 APK，CI 构建与签名检查通过 | 当前归档的 17 个页面及资源与 Web/未签名 iOS 逐字节一致；原生真实 touchscreen 和进程恢复另有 4745 → 4851 的同内容工作区证据；历史原生 15 轮、实际 DeepSeek 均保留源码范围 | 当前 APK 没有冒称真机验证；手机硬件、低内存系统回收、GPU 呈现与触控延迟专项未测 |
-| macOS | 43ab4f4 CI App / DMG 与 Rust 检查通过，DMG 校验和通过 | 此前实际窗口已测存档、DeepSeek、音频与最小化。独立 5de5d11 长测完成 10 轮 / 64 个完成态观测，每轮采到内核归属 8 进程 | 第 11 轮被锁屏中断，未计通过；剩余长测及最新布局的实际原生窗口需要手动解锁。签名公证未做 |
-| Windows | 43ab4f4 CI 安装包、安装版原生检查及连续运行通过 | 15 个窗口 / 982,704 ms / 97 个完成态观测，全部 8 进程计数完整；P95 15.7 ms，最大 62.6 ms，有 1 次超过 50 ms 的回调间隔，无系统查询重采 | 保留该间隔，未保证零卡顿；数据不代表 GPU 呈现或手机 FPS。用户电脑、真实 Windows DeepSeek 和硬件性能未测 |
+| Web | 13cf180 生产候选已归档 | 云端浏览器 108 项通过、4 项按平台跳过，离线 6 项、单元 37 项通过；历史 15 轮保留原版本范围 | 主屏幕安装、真机硬件与 GPU/触控专项未测；有限采样不证明无泄漏 |
+| iOS | 13cf180 普通模拟器与未签名设备包齐备 | 实际安装普通包首点教学 1 项通过；三台独立冷启动共 9 项功能通过、3 项跳过，每套 6 条本轮原生记录；四台设备关闭/删除均成功 | 历史音频/生命周期/15 轮按原版本保留；签名与手机硬件为额外未测范围 |
+| Android | 13cf180 API 36 / JDK 21 调试 APK，CI 与签名检查通过 | 17 个页面和资源与 Web、iOS 两种 App 逐字节一致；原生触控/进程恢复、15 轮与真实 DeepSeek 证据均保留各自版本范围 | 当前 APK 未冒称真机验证；硬件、低内存系统回收、GPU 呈现与触控延迟专项未测 |
+| macOS | 13cf180 CI App/DMG、Rust 4 项及原生入口检查通过 | 普通首次教学/实际手牌状态 1 项通过；DMG 文件与 CI 原生测试副本相同。本机当前游戏源码可实际绘出桌面与卡牌 | 强化像素检查后，7ca5749 的 CI 画布 20 秒仍为 0 个卡牌像素，保持失败待查。完整新 15 轮待解锁/开发工具认证；旧 10 轮为中断结果。签名公证未做 |
+| Windows | 13cf180 普通 NSIS、安装版原生检查与连续运行通过 | 15 个窗口 / 981153 ms / 98 个完成态观测，全部 8 进程计数完整；P95 15.7 ms，最大 31.3 ms，超过 50 ms 间隔为 0，无系统查询重采 | Microsoft Basic Render Driver / D3D11 环境，不外推 GPU 呈现、手机 FPS 或无泄漏；用户电脑和真实 Windows DeepSeek 未测 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件。按用户后续选择，本轮使用模拟器，签名与真机记录保留为额外未验证范围。
 
 ## 最近验证
+
+[13cf180 五平台 CI](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39142903013) 全部成功，已按用户授权合并到 main，提交 `8a951c02d8bed61b8eb757718c8bbd269beedd36`；合并 tree 与实测 13cf180 相同。云端 iOS 原始报告为 `artifacts/ios-13cf180-run/{ios-ordinary-entry,ios-cold-entry}.json`，Windows 原始报告与摘要为 `artifacts/windows-13cf180-run/`。
+
+`artifacts/packages/candidate-13cf180/` 有七份产物及 SHA256SUMS：Web、源码、Android APK、实际安装并通过首点测试的 iOS 模拟器 App、未签名 iOS 设备 App、Mac DMG、Windows NSIS。四类普通客户端的 17 个页面/资源相同；ZIP/APK 共 938 个文件做精确凭据值和普通包诊断标记字节扫描，未发现匹配，不能称为解码所有二进制嵌入数据。Mac DMG 只读挂载后 3 个 App 文件与 CI 原生实测副本相同，已卸载；APK 签名、iOS 平台和可执行权限验证通过。Windows EXE 未在本机展开，保留 CI 实际安装验证范围。`releaseReady=false`，代码合并不等于所有验收完成。
+
+Mac 专项的新像素门禁在 7ca5749 复现失败：`artifacts/macos-7ca5749-job.log` 与 `artifacts/macos-7ca5749-attachments/EB9ED454-09CD-46BE-96E9-D553596301B6.png` 确认手牌文字已存在，但原生截图继续读取约 20 秒仍无卡牌像素。显式 App 置前（f73cb5c）的 [Mac 专项](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39147349513) 同样失败。现准备配对原生屏幕与真实帧缓冲诊断，普通游戏渲染器和像素断言保持原样。Mac 专项不代表其他平台重新通过。
+
+原本机 10 轮报告已保留在 `artifacts/macos-interrupted-5de5d11-ten-rounds/`，新版 CUA 尝试没有接受任何轮次。独立 XCTest 15 轮驱动已编译通过、单元 38 项通过；实际启动在系统认证阶段失败，尚未进入测试，`artifacts/macos-xctest-soak/2c47bc5f-e105-40cc-b345-c6a899950d25/report.json` 保持 passed=false。已请求用户解锁并完成开发工具认证；受保护审计 App 的 PID 和二进制哈希保持不变。
+
+## 历次补充（保留当时的失败与待办）
 
 dfc5f92 的 [39126146571](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39126146571) 已全部结束，整体失败：Web / Android / macOS / Windows 成功，iOS 首次教学触摸在 ready / inert=false 后被系统取消，另两项功能通过。Web 云端单元 32、浏览器 100（另 4 项按平台跳过）、离线 6 项通过；完整日志为 `artifacts/web-dfc5f92-job.log`。同源码本机构建、服务端类型检查与上述回归也通过。Android 原生核心及宿主强制停止恢复通过；iOS 普通模拟器与未签名设备构建通过。已查看 320×568 新暂停/恢复布局实际截图；晚到的同位置第二次触摸不再导致下注。
 

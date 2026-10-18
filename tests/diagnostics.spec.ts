@@ -49,3 +49,24 @@ test('原生审计返回的历史音频快照不随后续真实 AudioContext 状
   const oldLength=await snapshot.evaluate(report=>report.audioEvents.length);await snapshot.dispose();
   expect(oldLength,'A past snapshot must not gain future events').toBe(0);
 });
+
+test('画布诊断读取实际渲染器缓冲区，不改变当前手牌与灵石',async({page},testInfo)=>{
+  await page.goto('/');await expect(page.locator('#app')).toHaveAttribute('data-boot-phase','ready');
+  await page.locator('#learn-start').click();await page.getByRole('button',{name:'关闭新手教学',exact:true}).click();
+  await page.locator('#start').click();
+  await page.waitForFunction(()=>{const table=document.querySelector<HTMLElement>('#live-table')!;return table.dataset.busy==='false'&&(table.dataset.actor==='0'||table.dataset.street==='complete');});
+  const before={hand:await page.locator('#live-table').getAttribute('aria-label'),wallet:await page.locator('#wallet').textContent()};
+  await page.addScriptTag({type:'module',content:"import {initializeNativeAudit} from '/src/native-audit.ts'; await initializeNativeAudit();"});
+  await page.getByRole('button',{name:'运行验收',exact:true}).click();
+  await page.getByRole('button',{name:'检查画布渲染',exact:true}).click();
+  const state=page.locator('#audit-render-state');await expect(state).toContainText('DRAWSTATE ');
+  const facts=JSON.parse((await state.textContent())!.slice('DRAWSTATE '.length));
+  expect(facts.error).toBeUndefined();expect(facts.width).toBe(840);expect(facts.height).toBe(1000);
+  expect(facts.nonTransparent).toBeGreaterThan(100);expect(facts.lightCardPixels).toBeGreaterThan(100);
+  expect(facts.cssWidth).toBeGreaterThan(0);expect(facts.cssHeight).toBeGreaterThan(0);
+  expect(facts.contextLost).toBe(false);expect(facts.hidden).toBe(false);expect(facts.frame).toBeGreaterThan(0);
+  await expect(page.getByAltText('验收渲染器读取图，非屏幕画面')).toBeVisible();
+  expect({hand:await page.locator('#live-table').getAttribute('aria-label'),wallet:await page.locator('#wallet').textContent()}).toEqual(before);
+  await page.getByAltText('验收渲染器读取图，非屏幕画面').scrollIntoViewIfNeeded();
+  await page.screenshot({path:`artifacts/renderer-probe-${testInfo.project.name}.png`});
+});

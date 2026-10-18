@@ -92,3 +92,5 @@ src/
 Mac 独立长测使用 `node scripts/macos-runtime-soak.mjs`；先用 `node scripts/prepare-macos-soak.mjs` 生成专用 App（重建前仅关闭“问道牌途长测”）。`--build-only` 只编译 XCTest 驱动，不启动 App。实际运行需要 Mac 解锁并完成系统开发工具认证；驱动仅允许 `com.wendao.poker.soak.desktop`，原有验收 App 不作为操作目标。每轮冻结完整摘要后，宿主采集进程组内存并确认，才启动下一轮；结果保留在 `artifacts/macos-xctest-soak/<runID>/`。
 
 定位 Mac 原生问题时，可用 `gh workflow run verify.yml --ref <分支名> -f platform=macos` 手动执行 Mac 专项。此范围只用于诊断；PR、推送到 main 和默认手动运行仍执行全部平台，专项通过不能代替五平台通过。
+
+若需区分 Mac 截图与帧缓冲渲染，先生成专用长测 App，再运行 `node scripts/macos-runtime-soak.mjs --render-probe`。它只收集原生屏幕、画布尺寸及实际渲染器快照，不代表普通版本视觉通过，也不执行 15 轮；普通像素门禁失败仍保持失败。`--build-only` 现在无需预先构建 App，仅编译 XCTest。
