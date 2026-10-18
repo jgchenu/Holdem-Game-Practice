@@ -213,6 +213,11 @@ final class PracticeUITests: XCTestCase {
         requireActionable(call)
         let before = table(app).label
         XCUIDevice.shared.press(.home)
+        let background = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "state == %ld OR state == %ld", XCUIApplication.State.runningBackground.rawValue, XCUIApplication.State.runningBackgroundSuspended.rawValue),
+            object: app
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [background], timeout: 10), .completed, "The real app must reach a native background state")
         app.activate()
         requireActionable(resume)
         XCTAssertEqual(table(app).label, before, "Backgrounding must preserve the hand at the hero's turn")
@@ -236,14 +241,15 @@ final class PracticeUITests: XCTestCase {
         auditContains("\"audioStates\":[\"suspended\"]")
         let text = String(sample.label.dropFirst("AUDIT ".count))
         let result = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+        let evidence = XCTAttachment(data: Data(text.utf8), uniformTypeIdentifier: "public.json")
+        evidence.name = "ios-native-runtime-audit"; evidence.lifetime = .keepAlways; add(evidence)
         XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["elapsedMs"] as? Int), 65000)
         XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["frames"] as? Int), 1000)
         XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["busyFrames"] as? Int), 30)
         XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["completedHands"] as? Int), 2)
-        XCTAssertGreaterThan(try XCTUnwrap(result["hidden"] as? Int), 0)
+        // WKWebView may keep document.hidden false while Capacitor reports the
+        // actual native background transition. Require that real bridge event.
         XCTAssertGreaterThan(try XCTUnwrap(result["suspends"] as? Int), 0)
-        let evidence = XCTAttachment(data: Data(text.utf8), uniformTypeIdentifier: "public.json")
-        evidence.name = "ios-native-runtime-audit"; evidence.lifetime = .keepAlways; add(evidence)
         #if NATIVE_LIVE_AI
         app.buttons["收起验收"].tap()
         app.buttons["请教青玄师父"].tap()

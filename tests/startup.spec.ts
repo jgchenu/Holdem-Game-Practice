@@ -15,7 +15,9 @@ test('牌桌异步准备完成前保持启动保护，完成后教学可用', as
   await page.goto('/');
   await page.waitForFunction(() => typeof (window as any).__releaseTableReady === 'function');
   await expect(page.locator('#app')).toHaveJSProperty('inert', true);
-  expect(await page.evaluate(() => Boolean((window as any).__splashRequested))).toBe(false);
+  // The native overlay must be released so an occluded WebView can render,
+  // while the DOM stays inert until the real table is ready.
+  expect(await page.evaluate(() => Boolean((window as any).__splashRequested))).toBe(true);
   await page.evaluate(() => (window as any).__releaseTableReady());
   await expect(page.locator('#app')).toHaveJSProperty('inert', false);
   await page.getByRole('button', { name: '从零学德州 →', exact: true }).click();

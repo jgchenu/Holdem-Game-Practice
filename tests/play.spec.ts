@@ -31,6 +31,30 @@ async function start(page: Page, reduced = true) {
   await expect(page.locator("#live-table")).toHaveAttribute("data-actor", "0");
 }
 
+test("恢复牌局时快速连点不会穿透成跟注或额外投入", async ({ page }, info) => {
+  await start(page);
+  await page.locator('#pause').click();
+  await expect(page.locator('#resume')).toBeVisible();
+  const before = await page.evaluate(() => ({
+    hand: document.querySelector('#live-table')!.getAttribute('aria-label'),
+    wallet: document.querySelector('#wallet')!.textContent,
+  }));
+  const r = (await page.locator('#resume').boundingBox())!;
+  const x = r.x + r.width / 2, y = r.y + r.height / 2;
+  if (info.project.use.hasTouch) {
+    await page.touchscreen.tap(x, y);
+    await page.touchscreen.tap(x, y);
+  } else await page.mouse.dblclick(x, y);
+  expect(await page.evaluate(() => ({
+    hand: document.querySelector('#live-table')!.getAttribute('aria-label'),
+    wallet: document.querySelector('#wallet')!.textContent,
+  }))).toEqual(before);
+  await expect(page.locator('#call')).toBeEnabled();
+  await page.locator('#call').click();
+  await idle(page);
+  await expect(page.locator('#wallet')).not.toHaveText(before.wallet!);
+});
+
 test("手机下注面板、重复点击保护与刷新后恢复当前手牌", async ({
   page,
 }, info) => {

@@ -24,6 +24,7 @@
     "audit:ios": "node scripts/platform.mjs ios-audit",
     "audit:android": "node scripts/platform.mjs android-audit",
     "build:desktop-audit": "node scripts/platform.mjs desktop-audit",
+    "build:web-audit": "node scripts/web-audit.mjs",
     "test:desktop": "node scripts/platform.mjs desktop-test"
   },
   "dependencies": {

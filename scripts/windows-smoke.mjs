@@ -6,11 +6,12 @@ import assert from "node:assert/strict";
 
 if (process.platform !== "win32")
   throw new Error("This native smoke test requires Windows.");
+const runtimeAudit = process.env.WENDAO_RUNTIME_AUDIT === "1";
 const application =
-  process.env.TAURI_SMOKE_APP || resolve("src-tauri/target/release/app.exe");
+  runtimeAudit ? resolve("src-tauri/target/release/app.exe") : process.env.TAURI_SMOKE_APP || resolve("src-tauri/target/release/app.exe");
 if (!existsSync(application))
   throw new Error(`Application missing: ${application}`);
-const output = resolve("artifacts/windows-native");
+const output = resolve(runtimeAudit ? "artifacts/windows-runtime" : "artifacts/windows-native");
 mkdirSync(output, { recursive: true });
 const profiles = resolve("artifacts/.windows-test-profiles");
 mkdirSync(profiles, { recursive: true });
@@ -60,7 +61,7 @@ async function command(
   return result.value;
 }
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-async function until(predicate, label, timeout = 30_000) {
+async function until(predicate, label, timeout = 30_000, pollMs = 100) {
   const end = Date.now() + timeout;
   let last;
   while (Date.now() < end) {
@@ -70,7 +71,7 @@ async function until(predicate, label, timeout = 30_000) {
     } catch (error) {
       last = error;
     }
-    await sleep(100);
+    await sleep(pollMs);
   }
   throw new Error(`Timeout: ${label}${last ? " " + last.message : ""}`);
 }
@@ -154,9 +155,44 @@ async function launchNative() {
   );
   assert.equal(await execute("return '__TAURI_INTERNALS__' in window"), true, "The session must target the native Tauri client");
 }
+async function verifyRuntime() {
+  await until(() => execute("return !!window.__wendaoAudit"), "explicit native audit build");
+  assert.deepEqual(await execute("return window.__wendaoAudit.report().audioStates"), [], "Audio must be lazy");
+  await click('#sound');
+  await until(() => execute("return window.__wendaoAudit.report().audioStates.includes('running')"), "real audio unlock");
+  await click('#start'); await idle();
+  await until(() => execute("return !document.querySelector('#call').disabled"), "hero turn before minimizing");
+  const state = () => execute("return {hand:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent}");
+  const before = await state();
+  await command(`/session/${session}/window/minimize`, {});
+  await until(() => execute("return window.__wendaoAudit.report().hidden>0 && window.__wendaoAudit.report().audioStates.includes('suspended')"), "native minimize suspends audio");
+  await command(`/session/${session}/window/rect`, {width:460,height:920});
+  await until(() => execute("return !document.hidden && !document.querySelector('#resume').hidden"), "native restore remains paused");
+  assert.deepEqual(await state(), before, "Minimizing preserves the same hand and wallet");
+  await click('#resume');
+  await until(() => execute("return window.__wendaoAudit.report().audioStates.includes('running')"), "explicit continue resumes audio");
+  await click('#sound');
+  await until(() => execute("return window.__wendaoAudit.report().audioStates.includes('suspended')"), "mute suspends real context");
+  const memory = () => JSON.parse(execFileSync('powershell.exe',['-NoProfile','-Command',`Get-Process -Id ${appProcess.pid} | Select-Object WorkingSet64,PrivateMemorySize64 | ConvertTo-Json -Compress`],{encoding:'utf8',timeout:10_000}));
+  const memoryBefore = memory();
+  await click('#audit-open'); await click('#audit-run');
+  await until(() => execute("return ['complete','failed'].includes(document.querySelector('#audit-status').dataset.phase)"), "65 second real game audit", 110_000, 750);
+  const status = await execute("return {phase:document.querySelector('#audit-status').dataset.phase,text:document.querySelector('#audit-status').textContent}");
+  const measurements = await execute("return JSON.parse(document.querySelector('#audit-report').textContent.slice(6))");
+  const result = {passed:status.phase==='complete',application,scope:'native Windows WebView2 audit binary; installed production client tested separately',status,measurements,memory:{before:memoryBefore,after:memory(),scope:'Tauri app process; excludes WebView2 child processes; not a leak verdict'}};
+  writeFileSync(join(output,'runtime.json'),JSON.stringify(result,null,2));
+  await screenshot('continuous-runtime');
+  assert.equal(status.phase,'complete',status.text);
+  assert.ok(measurements.elapsedMs>=65_000 && measurements.frames>=1000 && measurements.completedHands>=2);
+  assert.deepEqual(measurements.audioStates,['suspended']);
+  writeFileSync(join(output,'result.json'),JSON.stringify(result,null,2));
+}
 try {
   await until(async () => { await command("/status"); return true; }, "Tauri driver starts");
   await launchNative();
+  if (runtimeAudit) {
+    await verifyRuntime();
+  } else {
   // The CI machine has an isolated user profile. These are test fixtures, never a user's save.
   await execute(
     "localStorage.setItem('wendao:preferences:v1',JSON.stringify({sound:false,reducedMotion:true,quality:'balanced'}));localStorage.removeItem('wendao:practice:v1');localStorage.setItem('wendao:learning:v1','[\"ranks\",\"actions\",\"position\"]');localStorage.removeItem('wendao:trials:v1');",
@@ -331,6 +367,7 @@ try {
   console.log(
     "Windows native smoke passed: installed app, raise, reload, showdown, review, narrow window, trials and native process restart.",
   );
+  }
 } catch (error) {
   writeFileSync(join(output, "result.json"), JSON.stringify({ passed: false, error: error.message }, null, 2));
   if (session) {
@@ -346,6 +383,10 @@ try {
     } catch {}
   }
   bridge.kill();
-  appProcess?.kill();
+  if (appProcess?.pid && appProcess.exitCode === null) {
+    try {
+      execFileSync('taskkill.exe', ['/PID', String(appProcess.pid), '/T', '/F'], {stdio:'ignore',timeout:15_000});
+    } catch { appProcess.kill(); }
+  }
   writeFileSync(join(output, "driver.log"), logs);
 }

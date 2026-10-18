@@ -3,9 +3,9 @@ export function initializeStartupTrace() {
   const events: object[] = [], errors: string[] = [];
   const snapshot = () => ({ atMs: Math.round(performance.now()), inert: document.getElementById('app')?.inert, readyState: document.readyState, focused: document.hasFocus(), open: [...document.querySelectorAll('dialog[open]')].map(d => d.id), viewport: { width:innerWidth,height:innerHeight,top:visualViewport?.offsetTop,scale:visualViewport?.scale } });
   const record = (value: object) => { events.push(value); if (events.length>60) events.shift(); };
-  for (const type of ['pointerdown','pointerup','touchstart','touchend','click','close']) document.addEventListener(type, event => {
+  for (const type of ['pointerdown','pointerup','pointercancel','touchstart','touchend','touchcancel','click','close']) document.addEventListener(type, event => {
     const e = event as MouseEvent, target = event.target as HTMLElement;
-    record({ type, target:target.id || target.tagName, button:target.closest('button')?.id, x:e.clientX, y:e.clientY, ...snapshot() });
+    record({ type, target:target.id || target.tagName, connected:target.isConnected, button:target.closest('button')?.id, x:e.clientX, y:e.clientY, ...snapshot() });
     if(type==='click') queueMicrotask(()=>record({type:'after-click',...snapshot()}));
   },true);
   window.addEventListener('error', e => { errors.push(e.message); });

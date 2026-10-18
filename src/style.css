@@ -28,6 +28,7 @@ a,
 input,
 select {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 button,
 input,

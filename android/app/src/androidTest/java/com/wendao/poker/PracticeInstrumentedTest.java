@@ -153,6 +153,7 @@ public class PracticeInstrumentedTest {
             until("document.querySelector('[data-trial=free-check]').textContent.includes('已达成')");
             js("document.querySelector('#study-dialog').close()");
             js("document.querySelector('#resume').click()"); idle();
+            until("!document.querySelector('#raise').disabled");
             js("document.querySelector('#raise').click()");
             until("document.querySelector('#raise-dialog').open");
             assertEquals("true", js("document.querySelector('#raise-confirm').getBoundingClientRect().bottom <= innerHeight"));

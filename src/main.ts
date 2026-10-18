@@ -7,6 +7,7 @@ const appRoot = document.querySelector<HTMLDivElement>("#app")!;
 // The DOM can reach native accessibility before event handlers and the splash
 // transition finish. Expose controls only once they can actually receive input.
 appRoot.inert = true;
+let practiceReady: Promise<void> | undefined;
 try {
   if (import.meta.env.VITE_STARTUP_TRACE === '1') {
     (await import('./startup-trace')).initializeStartupTrace();
@@ -21,8 +22,7 @@ try {
   if (new URLSearchParams(location.search).get("mode") === "demo") {
     await import("./demo-ui");
   } else {
-    const { practiceReady } = await import("./play-ui");
-    await practiceReady;
+    practiceReady = (await import("./play-ui")).practiceReady;
   }
 } catch (error) {
   console.error("Practice startup failed", error);
@@ -36,6 +36,9 @@ try {
   // it after either the game UI or the recoverable error screen is mounted.
   try {
     await dismissLaunchScreen();
+    // Let the WebView become visible before waiting for Phaser's first scene.
+    // Occluded native WebViews can postpone rendering; input remains guarded.
+    await practiceReady;
   } finally {
     appRoot.inert = false;
   }

@@ -32,3 +32,7 @@
 - 浏览器：模型文本安全呈现、失败回退、关闭后保留同一手牌和灵石已通过；这里使用模拟响应，不是真实模型调用。
 - DeepSeek 真实联调：本机网关经官方服务实际完成「看懂局面」「衡量价格」「复盘思路」三次调用，均 HTTP 200；此固定合成测试的耗时分别为 1545 / 1323 / 1639 ms，来源为模型，数字与程序事实一致。报告位于 `artifacts/deepseek-live-report.json`。这是一次本机小样本联调，不能代表持续延迟、其他模型、原生包网络或整体教学质量。
 - 页面真实联调：390×844 的本机 WebKit 独立测试页面通过真实网关取得 DeepSeek 解读，灵石保持不变；端到端一次为 2046 ms。证据为 `artifacts/deepseek-live-mobile-webkit.png` 和 `artifacts/deepseek-live-ui.json`，并非手机真机或原生包联网证明。
+- Android 原生联调：API 36 模拟器中的实际 Capacitor WebView 经本机回环端口转发取得 DeepSeek 解读；健康检查 HTTP 200、实际 Origin 为 `https://localhost`。报告 `artifacts/android-native-runtime-1792305645015.json` 中 `liveAI.passed=true`。首次失败及调试网络配置的边界见 [原生运行验收](NATIVE_AUDIT.md)，不能当作公网服务已部署或手机已验收。
+- iOS 原生联调：iOS 26.5 模拟器的真实师父面板取得模型解读，XCTest 原生断言通过，日志为 `artifacts/ios-deepseek-native-background.log`；同轮原生音频、后台恢复与持续动画数据见 `artifacts/ios-audit-1792305846978.xcresult`。本机回环请求未额外放开 ATS。
+- macOS 原生联调：独立验收客户端 `tauri://localhost` 实际取得模型解读，解释跟注 20 / 跟注后可竞争 90 / 价格 22.2%；请教前后灵石均为 1000，来自 CUA 实际窗口观察，记录在 `artifacts/macos-native-runtime-observation.json`。
+- 新手表达：真实回复曾把内部字段名带入说明，已补充零基础表达要求，先说明当前选择、不展示字段名或空值。实际免费过牌场景复测 HTTP 200、1585 ms，回复未带内部字段名；见 `artifacts/deepseek-beginner-language.json`。这是单次样本，不保证模型每次表达都正确。

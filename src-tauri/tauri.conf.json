@@ -22,6 +22,7 @@
         "backgroundColor": "#13271e",
         "backgroundThrottling": "disabled",
         "resizable": true,
+        "acceptFirstMouse": true,
         "fullscreen": false
       }
     ],

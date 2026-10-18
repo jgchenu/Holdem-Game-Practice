@@ -111,6 +111,14 @@ jobs:
       - name: Verify installed Windows client
         if: runner.os == 'Windows'
         run: node scripts/windows-smoke.mjs
+      - name: Build isolated Windows runtime audit
+        if: runner.os == 'Windows'
+        run: npm run build:desktop-audit
+      - name: Verify native Windows audio, minimize and continuous frames
+        if: runner.os == 'Windows'
+        env:
+          WENDAO_RUNTIME_AUDIT: '1'
+        run: node scripts/windows-smoke.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -119,4 +127,5 @@ jobs:
             src-tauri/target/release/bundle/dmg/*.dmg
             src-tauri/target/release/bundle/nsis/*.exe
             artifacts/windows-native/
+            artifacts/windows-runtime/
           retention-days: 14

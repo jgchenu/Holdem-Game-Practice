@@ -87,6 +87,7 @@ let savedOK = !saved.corrupt && storageHealthy(),
   notice = "";
 let learned = loadLearning();
 let completedTrials = loadTrials();
+let resumeActionReadyAt = 0;
 let finishPreparing: () => void;
 // Module import binds the controls, but Phaser prepares its renderer asynchronously.
 export const practiceReady = new Promise<void>(resolve => { finishPreparing = resolve; });
@@ -142,7 +143,8 @@ function updateUI() {
   button("learn-start").className = trained ? "secondary-button" : "primary-button";
   button("start").className = trained ? "primary-button" : "secondary-button";
   const view = hand ? observe(hand, 0) : null;
-  const heroTurn = ready && !busy && !paused && !failed && view?.actor === 0;
+  const heroTurn = ready && !busy && !paused && !failed &&
+    performance.now() >= resumeActionReadyAt && view?.actor === 0;
   const complete = view?.street === "complete";
   get("start-panel").hidden = !!hand;
   get("turn-panel").hidden =
@@ -243,7 +245,7 @@ async function begin() {
   void pump();
 }
 async function requestAction(action: Action) {
-  if (busy || paused || failed || hand?.actor !== 0) return;
+  if (busy || paused || failed || performance.now() < resumeActionReadyAt || hand?.actor !== 0) return;
   busy = true;
   scene.feedback.unlock();
   updateUI();
@@ -294,7 +296,7 @@ async function pump() {
   }
 }
 async function resume() {
-  if (busy || !hand) return;
+  if (busy || !hand || (!paused && !failed)) return;
   void scene.feedback.unlock();
   if (failed) {
     busy = true;
@@ -309,6 +311,10 @@ async function resume() {
   }
   if (!failed) {
     paused = false;
+    // The full-width resume control becomes betting controls at the same
+    // position. Absorb a rapid second tap instead of committing a new wager.
+    const guardedUntil = resumeActionReadyAt = performance.now() + 300;
+    setTimeout(() => { if (resumeActionReadyAt === guardedUntil) updateUI(); }, 300);
     updateUI();
     void pump();
   }
