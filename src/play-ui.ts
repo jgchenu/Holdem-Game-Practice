@@ -176,6 +176,33 @@ function captureRendererProbe() {
 }
 
 if (import.meta.env.VITE_NATIVE_AUDIT === "1" || import.meta.env.DEV) {
+  let restoreSurface = () => {};
+  removeGlobalListeners.push(() => restoreSurface());
+  listen(document, "click", event => {
+    if (event.target instanceof Element && event.target.closest("#audit-run")) { restoreSurface(); return; }
+    const control = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("[data-audit-composite]") : null;
+    if (!control || document.querySelector<HTMLButtonElement>("#audit-run")?.disabled) return;
+    restoreSurface();
+    const canvas = game.canvas, parent = canvas.parentNode!, next = canvas.nextSibling;
+    const shell = document.querySelector<HTMLElement>(".game-shell")!;
+    const canvasStyle = canvas.getAttribute("style"), shellStyle = shell.getAttribute("style");
+    restoreSurface = () => {
+      parent.insertBefore(canvas, next);
+      if (canvasStyle === null) canvas.removeAttribute("style"); else canvas.setAttribute("style", canvasStyle);
+      if (shellStyle === null) shell.removeAttribute("style"); else shell.setAttribute("style", shellStyle);
+    };
+    const variant = control.dataset.auditComposite;
+    if (variant === "isolation") shell.style.isolation = "auto";
+    if (variant === "layer") canvas.style.transform = "translateZ(0)";
+    if (variant === "outside") {
+      const rect = canvas.getBoundingClientRect();
+      document.body.appendChild(canvas);
+      Object.assign(canvas.style, {position:"fixed", left:`${rect.x}px`, top:`${rect.y}px`, width:`${rect.width}px`, height:`${rect.height}px`, margin:"0", zIndex:"3"});
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      setDiagnosticText(get("audit-composite-state"), "COMPOSITE " + JSON.stringify({variant, ...rendererSurfaceFacts()}));
+    }));
+  });
   listen(document, "click", event => {
     const probe = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("#audit-render-probe") : null;
     const run = document.querySelector<HTMLButtonElement>("#audit-run");

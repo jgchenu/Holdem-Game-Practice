@@ -180,9 +180,21 @@ final class PracticeUITests: XCTestCase {
             let restored = try XCTUnwrap(NSBitmapImageRep(data: table.screenshot().pngRepresentation))
             let original = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             original.name = "screen-original-canvas-after-readback"; original.lifetime = .keepAlways; add(original)
+            var comparisons: [[String: Any]] = []
+            for (variant, title) in [("isolation", "对照隔离层"), ("layer", "对照独立层"), ("outside", "对照外置画布"), ("restore", "恢复画布布局")] {
+                open.click(); button(app, containing: title).click()
+                let marker = diagnosticText(app, containing: "COMPOSITE {\"variant\":\"\(variant)\"")
+                XCTAssertTrue(marker.waitForExistence(timeout: 10))
+                button(app, containing: "收起验收").click()
+                // Include the whole native screen because the outside case moves the original canvas.
+                let screen = XCUIScreen.main.screenshot()
+                let attachment = XCTAttachment(screenshot: screen)
+                attachment.name = "native-composite-\(variant)"; attachment.lifetime = .keepAlways; add(attachment)
+                comparisons.append(["variant": variant])
+            }
             try write("probe.json", ["runID": runID, "facts": facts, "nativeCardPixelsBeforeProbe": nativePixels,
                 "nativeCardPixelsAfterReadback": lightCardPixels(restored), "tableFrameBeforeProbe": tableFrameBefore,
-                "appFrameBeforeProbe": appFrameBefore, "appStateBeforeProbe": appStateBefore])
+                "appFrameBeforeProbe": appFrameBefore, "appStateBeforeProbe": appStateBefore, "compositorScreens": comparisons])
             print("Renderer facts collected; does not turn a failed ordinary screenshot into a pass")
             return
         }

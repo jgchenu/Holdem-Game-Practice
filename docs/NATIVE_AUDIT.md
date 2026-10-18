@@ -230,3 +230,7 @@ CI 额外上传轻量 `macos-diagnostic-reports`（JSON 与 run.log），完整 
 [39150673700](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39150673700) 仍为 Mac 专项失败：普通原生卡牌像素门禁未通过。独立诊断本轮已通过六类查询回归，读取并解析 DRAWSTATE、保存前后截图与事实附件；随后写入项目内 probe.json 时系统返回 Code 513 / Operation not permitted。诊断测试失败，不能宣称已完成采集验收。日志还确认 teardown 确实终止独立 App。
 
 报告交换现改至每轮 UUID 对应的 `/private/tmp/wendao-macos-xctest-<UUID>` 私有目录（0700），Swift 严格匹配同一轮路径。宿主仍将 JSON、握手记录归档回原 artifacts 位置，再清理自己创建的临时目录；不会修改系统权限。像素门禁、轮次和内存采样边界不变。38 项单元测试、Node 语法及原生宏 build-only 编译通过（`artifacts/macos-temp-exchange-unit.log`、`artifacts/macos-temp-exchange-build.log`）；临时目录协议仍待云端实际运行。
+
+从本轮 xcresult 的 CRC 验证小文件中导出了实际事实附件 `artifacts/macos-146f577-attachments/8ED5BEDE-4FE7-4C66-919E-FE950BB173C4.json`：Apple GPU / WebGL、frame419、页面 hidden=false/focused=true、场景 active/visible、contextLost=false，840×1000 缓冲区有 124207 个非透明采样点、10331 个手牌浅色采样点。前后原生屏幕仍为空白画布，诊断读取图可见；因此帧缓冲非空不构成呈现通过。旧 2d45711 完整归档中的原生录屏第 7 秒也实际查看为空白，不能将问题仅归因于单张截图时机。
+
+新增 audit/dev 专属的三个可恢复显示对照（隔离层 auto、canvas translateZ(0)、同一 canvas 暂移到 body 并保持位置尺寸），仅用于原生截图定位合成边界；不会替换为读取图或 Canvas renderer。连续验收开始前和卸载时恢复原始 DOM/样式。四种浏览器配置的真实操作检查通过，覆盖 320px、390px、移动 WebKit 和桌面，手牌/灵石不变、canvas 父节点及样式恢复；已查看移动基线和对照截图。普通生产 index/assets 17 文件仍与 main13 逐字节相同（`artifacts/macos-compositor-ordinary-parity.json`），原生宏编译通过；Mac 原生对照截图结果待运行。
