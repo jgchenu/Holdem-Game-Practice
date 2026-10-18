@@ -3,6 +3,10 @@ import { dismissLaunchScreen, initializePlatform } from "./native";
 import { initializeOffline } from "./offline";
 import { prepareFonts } from "./fonts";
 
+const appRoot = document.querySelector<HTMLDivElement>("#app")!;
+// The DOM can reach native accessibility before event handlers and the splash
+// transition finish. Expose controls only once they can actually receive input.
+appRoot.inert = true;
 try {
   const dispose = await initializePlatform();
   if (import.meta.hot) import.meta.hot.dispose(dispose);
@@ -23,5 +27,9 @@ try {
 } finally {
   // Keep native artwork visible through the first WebView navigation. Release
   // it after either the game UI or the recoverable error screen is mounted.
-  await dismissLaunchScreen();
+  try {
+    await dismissLaunchScreen();
+  } finally {
+    appRoot.inert = false;
+  }
 }

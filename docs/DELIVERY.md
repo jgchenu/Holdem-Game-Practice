@@ -26,7 +26,7 @@
 
 ## 最近验证
 
-当前功能源码为 7c517b0。本机浏览器 60 项、生产离线 6 项、规则/服务/平台单元 21 项、Rust 文件 4 项及 iOS 原生 3 项通过；Android 模拟器与 macOS 实际窗口也验证了教学进度在进程重启后恢复。本轮 [39100789879](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39100789879) CI 仍在执行。上轮 3078cd1 的五平台 CI 全部成功，但不能代替新增教学的验证。
+7c517b0 的本机浏览器 60 项、生产离线 6 项、规则/服务/平台单元 21 项、Rust 文件 4 项及 iOS 原生 3 项通过；Android 模拟器与 macOS 实际窗口也验证了教学进度在进程重启后恢复。[39100789879](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39100789879) 中 Web、Android、macOS、Windows 成功；iOS 两项通过，新增教学用例首次点击未打开弹窗，整轮失败。修复与复验正在进行，不能称为五平台全部通过。上轮 3078cd1 的成功也不能代替新增教学验证。
 
 本轮候选包位于 `artifacts/packages/candidate-7c517b0/`。已收齐 Web ZIP、Android 调试 APK、iOS 模拟器与未签名设备 App ZIP、macOS arm64 DMG、Windows x64 NSIS。Windows 包来自同提交 CI，实际安装后 14 项检查通过，进程 9132 → 7152、教学步骤 3（界面第 4 步）恢复；报告位于 `artifacts/windows-7c517b0-run/artifacts/windows-native/`。SHA-256、ZIP 完整性、iOS 可执行权限与平台类型、DMG 校验和、APK v2 签名均已检查。Android APK 与两个 iOS App 中的教学入口脚本，与当前 Web 构建逐字节一致。`manifest.json` 保留源码提交、证据与未验收项，`releaseReady` 为 false。
 
@@ -156,3 +156,11 @@ Mac 已解锁，本轮通过实际原生窗口验证新版教学：原练习桌�
 首轮完整浏览器执行期间改动了前端与字体，开发服务器热重载导致两项中途返回首屏，记录保留于 `artifacts/onboarding-full-browser.log` 与 `artifacts/onboarding-initial-browser-failures/`。冻结源文件后完整执行 60 项通过，未放宽功能断言。
 
 本轮桌面文件测试曾因并行测试用系统时间生成了相同临时目录名而失败，改为进程内原子序号结合时间、PID，测试夹具目录独立；此修正只涉及测试夹具，不改变产品存档位置和写入逻辑。
+
+### 本轮：启动过渡期间的点击保护
+
+7c517b0 的 iOS 云端失败报告保留在 `artifacts/ios-7c517b0-run/`、`artifacts/onboarding-ios-ci.log`，视频帧为 `artifacts/ios-beginner-ci-before-tap.png` 与 `artifacts/ios-beginner-ci-after-tap.png`。原生测试在首次界面出现后点击教学，但失败层级仍停留在主界面，没有教学弹窗。此证据确认首次点击未打开；不能单独证明 WebKit 或启动图的具体内部根因。
+
+补齐产品启动保护：主界面在依赖初始化、事件绑定和原生启动图收起结束前保持 `inert`，完成后才允许输入；失败时同样释放保护，保留重试入口。iOS 教学用例等待入口真实启用且可点击，首屏优先走「从零学德州」，复用模拟器有存档时走常驻入口；第一次点击后必须出现教学弹窗，未加重试或跳过首次进程。逐步教学操作也等待本步保存完成。另修复首屏次要按钮缺少样式造成的系统白底，并统一教学滚动条颜色。
+
+本机原生 XCTest 3 项通过（`artifacts/startup-input-gate-ios.log`、`artifacts/ios-native-1792302348768.xcresult`）；浏览器模拟原生启动图等待的输入保护专项 4 项通过（`artifacts/startup-input-gate-targeted-final.log`），规则/服务/平台 21 项及服务端类型检查通过。浏览器专项使用模拟桥接，不能当作 iOS 实测；完整跨平台复验与新版候选包待完成。

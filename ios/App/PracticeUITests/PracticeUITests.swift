@@ -10,25 +10,53 @@ final class PracticeUITests: XCTestCase {
         app.images.matching(NSPredicate(format: "label CONTAINS %@", "你的底牌")).firstMatch
     }
 
+    private func requireActionable(_ element: XCUIElement, timeout: TimeInterval = 20) {
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"),
+            object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: timeout), .completed)
+    }
+
     func testNativeBeginnerGuidePersistsWithoutStartingPractice() throws {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")
+        let coldStart = Date()
         app.launch()
-        XCTAssertTrue(app.buttons["新手教学"].waitForExistence(timeout: 60))
-        app.buttons["新手教学"].tap()
-        if app.buttons["再跟师父学一遍"].exists { app.buttons["再跟师父学一遍"].tap() }
+        // Exercise the primary first-time-player entry in the first process.
+        // Do not tap merely because a WebKit accessibility node has appeared.
+        let mentor = app.buttons["新手教学"]
+        requireActionable(mentor, timeout: 60)
+        let learn = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "从零学德州", "复习新手教学")).firstMatch
+        // A reused local test simulator may already have a saved practice hand;
+        // fresh CI installs exercise the primary entry without clearing saves.
+        let entry = learn.exists ? learn : mentor
+        requireActionable(entry)
+        print("Native guide entry actionable: \(Date().timeIntervalSince(coldStart))s; simulator functional check, not a phone performance result")
+        entry.tap()
+        XCTAssertTrue(app.buttons["关闭新手教学"].waitForExistence(timeout: 20), "The first tap must open the guide without retrying or relaunching")
+        if app.buttons["再跟师父学一遍"].exists {
+            requireActionable(app.buttons["再跟师父学一遍"])
+            app.buttons["再跟师父学一遍"].tap()
+        }
         for _ in 0..<12 {
             if !app.buttons["← 上一步"].exists { break }
+            requireActionable(app.buttons["← 上一步"])
             app.buttons["← 上一步"].tap()
         }
-        button(app, containing: "师父带我学第一手").tap()
-        button(app, containing: "点击你的两张底牌").tap()
+        let first = button(app, containing: "师父带我学第一手")
+        requireActionable(first)
+        first.tap()
+        let hole = button(app, containing: "点击你的两张底牌")
+        requireActionable(hole)
+        hole.tap()
+        requireActionable(app.buttons["明白了，继续 →"])
         app.buttons["明白了，继续 →"].tap()
         XCTAssertTrue(app.staticTexts["桌子中间的灵石池"].waitForExistence(timeout: 10))
         app.buttons["关闭新手教学"].tap()
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["新手教学"].waitForExistence(timeout: 60))
+        requireActionable(app.buttons["新手教学"], timeout: 60)
         app.buttons["新手教学"].tap()
         XCTAssertTrue(app.staticTexts["桌子中间的灵石池"].waitForExistence(timeout: 10), "The native Preferences store must restore the beginner step")
         XCTAssertLessThanOrEqual(app.buttons["明白了，继续 →"].frame.maxY, app.frame.maxY - 16)

@@ -1265,6 +1265,8 @@ html[data-platform="native"] .web-install-note {
 
 .beginner-entry { display:grid; grid-template-columns:1.15fr 1fr; gap:10px; }
 .beginner-entry button { min-width:0; min-height:54px; font-size:15px; padding:10px 8px; }
+.beginner-entry .secondary-button { border:1px solid #9eae7955; border-radius:7px; background:linear-gradient(#2c4532,#20382a); color:#bec9a5; font-family:var(--serif); }
+.beginner-entry .secondary-button:disabled { opacity:.5; }
 .mentor-heading { flex-wrap:wrap; }
 #tutorial-open { margin-left:9px; }
 #tutorial-dialog { width:min(640px,calc(100% - 20px)); height:min(820px,94dvh); max-height:94dvh; padding:0; overflow:hidden; }
@@ -1275,7 +1277,10 @@ html[data-platform="native"] .web-install-note {
 .tutorial-progress { padding:0 20px 14px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:9px; color:#a9b99c; font-size:11px; }
 .tutorial-progress > div { width:100%; height:3px; border-radius:5px; background:#a7b79922; overflow:hidden; }
 .tutorial-progress i { display:block; height:100%; background:#ceb678; }
-.tutorial-scroll { flex:1; min-height:0; overflow:auto; padding:4px 20px 20px; overscroll-behavior:contain; }
+.tutorial-scroll { flex:1; min-height:0; overflow:auto; padding:4px 20px 20px; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#82956b #183126; }
+.tutorial-scroll::-webkit-scrollbar { width:6px; }
+.tutorial-scroll::-webkit-scrollbar-track { background:#183126; }
+.tutorial-scroll::-webkit-scrollbar-thumb { background:#82956b; border-radius:6px; }
 #tutorial-step-title { margin:8px 0 14px; color:#e1cf98; font:25px var(--serif); outline:none; }
 .tutorial-copy { font-size:15px; line-height:1.95; color:#e1ddc6; margin:0 0 18px; }
 .tutorial-detail { font-size:13px; line-height:1.9; color:#b8c5a7; padding:15px; border-left:2px solid #c9af75; background:#b7b16b0c; }
