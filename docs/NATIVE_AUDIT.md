@@ -182,3 +182,13 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 43ab4f4 同轮 Windows 安装版与原生连续运行通过。`artifacts/windows-43ab4f4-run/summary.json` 及原始 `artifacts/windows-runtime/` 记录 15 个窗口、97 个完成态观测、982,704 ms 采样、62,862 次回调；各轮 P95 15.7 ms，最大 62.6 ms，出现 1 次超过 50 ms 的回调间隔。保留这次间隔，未断言原因或连续零卡顿。15 轮每组 8 进程、计数完整；Private Bytes 388,751,360 → 465,518,592，Working Set 586,735,616 → 409,567,232。没有触发系统查询重采，不判断无泄漏，也不外推 GPU 呈现或手机 FPS。普通 NSIS 已补入 candidate-43ab4f4（6 份产物）；iOS gate 失败使该版本未生成云端普通模拟器包，releaseReady 继续为 false。
 
 紧凑状态标签的实际 iPhone 模拟器截图已检查：`artifacts/compact-startup-native-attachments/1FEA8D87-112D-45E3-9CB5-059D710FDD40.png`。短标签完整可读，教学入口可操作；这是测试构建的诊断浮层，普通包会移除，不将其当作用户产品页面。
+
+### 普通安装包首点门禁与 macOS CI 探针
+
+3e25c0c 的云端运行 [39136170832](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39136170832) 已终止：Web 108 项通过、4 项跳过；Android、macOS 构建和 Windows 验证成功。iOS 前两套各 3 项功能通过、1 项跳过，第三套被作业 30 分钟外层期限中断；不能算三套通过，也未验证第三台清理结果。原始记录在 `artifacts/ios-3e25c0c-run/`，其中 running 是取消前的报告快照，不是仍在运行。
+
+新增普通 iOS 构建的独立首点用例：全新模拟器、无诊断浮层、首次真实点击打开教学；通过后直接归档该设备实际安装的 App.app，再清理设备。原有三套诊断测试保留，首次点击不重试、单次就绪预算仍为 60 秒。外层 CI 调整为 60 分钟以容纳四台独立设备和打包，未放宽功能断言。本机普通用例 1 项通过、0 项跳过（`artifacts/ios-installed-ordinary-local.json`），归档 SHA-256 为 `9d3fff25002a752c38e569f0ab697f103e9493036c2b53c255e24d8e4ea08199`；原有三套复验 9 项通过、3 项跳过，设备均清理成功（`artifacts/ios-ordinary-preserved-three-cold.json`）。普通教学截图已实际检查。旧候选通用构建 ZIP 与实际安装包有 4 个文件不同，不能追认为同一实测包；新流程直接归档已安装 App 消除该归属缺口。
+
+新增独立 macOS XCTest 工程，CI 中仅启动普通 App 的专用副本，检查首次教学点击及真实发牌；启动前核对副本全部文件与链接，结束只关闭该副本。本机只允许 build-only，已编译通过并验证本地运行保护；尚未在 CI 执行，不计为原生功能通过或 15 轮长测。外部 App URL 初始化依据 [Apple XCUIApplication 文档](https://developer.apple.com/documentation/xcuiautomation/xcuiapplication)。不修改系统安全或辅助功能权限。
+
+用户已确认解锁 Mac，原独立长测窗口观察为暂停状态。此前 10 轮保留为中断结果，完整新一轮尚待执行；解锁不改变旧报告的未通过状态。

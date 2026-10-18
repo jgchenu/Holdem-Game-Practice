@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 export function readIosSimulator(args, query = spawnSync) {
   const inventory = args.length === 4 && args.join(' ') === 'list devices available --json';
   const containerRead = args.length === 4 && args[0] === 'get_app_container'
-    && /^[0-9a-f-]{36}$/i.test(args[1]) && args[2] === 'com.wendao.poker' && args[3] === 'data';
+    && /^[0-9a-f-]{36}$/i.test(args[1]) && args[2] === 'com.wendao.poker' && ['app','data'].includes(args[3]);
   assert.ok(inventory || containerRead, 'Only simulator inventory and our app container may use read recovery');
   const attempts = [];
   let container;

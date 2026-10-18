@@ -86,3 +86,5 @@ src/
 ## 原生工程与安装包
 
 移动端使用 Capacitor 承载同一牌桌和规则，桌面端使用 Tauri。`npm run build:android`、`npm run build:ios`、`npm run build:desktop` 会同步资源并构建当前平台产物。Android 需要 SDK 36 / JDK 21，iOS 需要 macOS / Xcode 26，桌面需要 Rust。`npm run test:android` 执行模拟器 App 测试，`npm run test:ios` 执行原生 XCTest 教学、师父面板与进程重启恢复测试。`npm run test:ios:cold` 在三个独立新模拟器上依次运行相同套件，首次教学点击失败即停止，不重试；只清理本次创建的设备。安装、签名、真机与性能验收状态见 [docs/DELIVERY.md](docs/DELIVERY.md)。
+
+`npm run test:ios:ordinary` 另建一台全新模拟器，用普通无诊断构建首次打开教学；通过后从该模拟器的已安装 App 生成 `artifacts/packages/wendao-ios-simulator.zip`，随后清理设备。此流程不替代三套诊断冷启动。`npm run test:macos:ui` 只允许在一次性 GitHub Actions 主机上执行，使用独立副本做原生首次教学检查；本机可用 `npm run test:macos:ui -- --build-only` 仅编译测试工程，不启动现有应用。云端 Mac UI 可用性须实跑确认，不等于已完成长测。

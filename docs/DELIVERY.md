@@ -217,3 +217,7 @@ Mac 已解锁，本轮通过实际原生窗口验证新版教学：原练习桌�
 14ced63 的本机整轮浏览器被用户更新 `.env` 触发的 Vite 重启打断；该轮不是通过结果，保留 `artifacts/startup-input-gate-browser.log` 和 `artifacts/startup-input-gate-interrupted-browser-evidence/`。浏览器测试现使用专用 5183 端口、不复用日常 5173 服务、不读取本机 `.env`、不代理到真实模型，并忽略原生构建与 artifacts 目录的文件变化。新隔离服务的启动、教学、独立浏览器恢复专项 14 项通过、2 项按项目有意跳过（`artifacts/deepseek-isolated-targeted.log`），完整回归执行中。
 
 核对本地 Capacitor SplashScreen 8.0.2 原生源码后确认：`hide()` 调用在原生渐隐被安排时即 resolve，并不等待动画完成。现让点击保护额外覆盖配置的 200 ms 渐隐区间，而非把桥接 promise 当成完成事件；功能等待不作为启动性能证明。此修改后的本机 iOS 三项 XCTest 通过（`artifacts/native-fade-gate-ios.log`、`artifacts/ios-native-1792303104392.xcresult`）；完整跨平台复验仍待最终结果。
+
+### 普通包验收补充
+
+iOS 新增普通构建的全新模拟器首次教学点击验证，直接归档该设备实际安装的 App，再执行原有三套诊断门禁。本机普通用例 1 项通过，三套诊断合计 9 项通过、3 项按配置跳过；云端新流程待执行。macOS 新增 CI 专用普通 App 副本的 XCTest 首点与发牌探针，本机仅编译和保护检查通过，运行未验证。详见 `docs/NATIVE_AUDIT.md`。3e25c0c 云端 iOS 因外层 30 分钟期限中断，仍不满足完整三套门禁；候选包继续 releaseReady=false。用户已解锁 Mac，完整新长测待继续。

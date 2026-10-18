@@ -64,7 +64,7 @@ test('模拟器冷机清单查询可在超时后重读一次，保留两次结�
 });
 
 test('模拟器重采禁止用于创建、启动、关闭或删除设备及其他 App', () => {
-  for (const args of [['create', 'name'], ['boot', device], ['shutdown', device], ['delete', device], ['get_app_container', device, 'another.app', 'data']]) {
+  for (const args of [['create', 'name'], ['boot', device], ['shutdown', device], ['delete', device], ['get_app_container', device, 'another.app', 'data'], ['get_app_container', device, 'com.wendao.poker', 'groups']]) {
     assert.throws(() => readIosSimulator(args, () => { throw Error('Must not execute a mutation'); }), /Only simulator inventory/);
   }
 });

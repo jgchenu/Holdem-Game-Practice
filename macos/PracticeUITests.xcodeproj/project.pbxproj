@@ -1,0 +1,36 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+  A10000000000000000000001 = {isa = PBXBuildFile; fileRef = A10000000000000000000002; };
+  A10000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeUITests.swift; sourceTree = "<group>"; };
+  A10000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PracticeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+  A10000000000000000000004 = {isa = PBXGroup; children = (A10000000000000000000002, A10000000000000000000005); sourceTree = "<group>"; };
+  A10000000000000000000005 = {isa = PBXGroup; children = (A10000000000000000000003); name = Products; sourceTree = "<group>"; };
+  A10000000000000000000006 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000007 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000008 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000009 = {
+   isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000012;
+   buildPhases = (A10000000000000000000006, A10000000000000000000007, A10000000000000000000008);
+   buildRules = (); dependencies = (); name = PracticeUITests; productName = PracticeUITests;
+   productReference = A10000000000000000000003; productType = "com.apple.product-type.bundle.ui-testing";
+  };
+  A10000000000000000000010 = {
+   isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 2600; };
+   buildConfigurationList = A10000000000000000000011; compatibilityVersion = "Xcode 14.0";
+   developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base);
+   mainGroup = A10000000000000000000004; productRefGroup = A10000000000000000000005;
+   projectDirPath = ""; projectRoot = ""; targets = (A10000000000000000000009);
+  };
+  A10000000000000000000011 = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000013, A10000000000000000000014); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A10000000000000000000012 = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000015, A10000000000000000000016); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A10000000000000000000013 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0; SWIFT_VERSION = 5.0; }; name = Debug; };
+  A10000000000000000000014 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0; SWIFT_VERSION = 5.0; }; name = Release; };
+  A10000000000000000000015 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.wendao.poker.macuitests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SUPPORTED_PLATFORMS = macosx; }; name = Debug; };
+  A10000000000000000000016 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.wendao.poker.macuitests; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = macosx; }; name = Release; };
+ };
+ rootObject = A10000000000000000000010;
+}

@@ -70,6 +70,27 @@ final class PracticeUITests: XCTestCase {
         XCTAssertEqual(result, .completed)
     }
 
+    // Selected only by the ordinary-build gate. The three diagnostic suites
+    // remain separate and retain their original readiness and first-tap checks.
+    func testOrdinaryNativeFirstTeachingEntry() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")
+        let coldStart = Date()
+        app.launch()
+        let readinessStart = Date()
+        requireNativeGeometry(app)
+        let entry = button(app, containing: "从零学德州")
+        requireActionable(entry, timeout: max(1, 60 - Date().timeIntervalSince(readinessStart)), in: app)
+        XCTAssertFalse(app.buttons["启动诊断"].exists, "This gate must exercise the ordinary client without a diagnostic overlay")
+        print("Ordinary native entry actionable: \(Date().timeIntervalSince(coldStart))s; simulator function check, not phone performance")
+        entry.tap()
+        XCTAssertTrue(app.buttons["关闭新手教学"].waitForExistence(timeout: 20),
+                      "The ordinary client's first tap must open teaching without relaunch or retry")
+        XCTAssertTrue(app.staticTexts["初入牌途 · 师父带练"].exists)
+        let image = XCTAttachment(screenshot: app.screenshot())
+        image.name = "ios-ordinary-first-teaching"; image.lifetime = .keepAlways; add(image)
+    }
+
     func testNativeBeginnerGuidePersistsWithoutStartingPractice() throws {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")

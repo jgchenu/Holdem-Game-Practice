@@ -64,7 +64,8 @@ jobs:
 
   ios:
     runs-on: macos-26
-    timeout-minutes: 30
+    # Four fresh devices plus packaging; per-action readiness stays at 60 s.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -72,11 +73,14 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run test:ios:ordinary
+      # Freeze the ordinary app that was actually tested, before diagnostic
+      # suites replace the build products. A later gate failure stays a failure.
+      - name: Verify tested ordinary archive
+        run: test -s artifacts/packages/wendao-ios-simulator.zip
       - run: npm run test:ios:cold
-      # Test-only input tracing must not ship in the simulator package.
+      # Restore ordinary build products after the diagnostic suites.
       - run: npm run build:ios
-      - name: Archive simulator app preserving bundle permissions
-        run: ditto -c -k --sequesterRsrc --keepParent artifacts/ios/Build/Products/Debug-iphonesimulator/App.app artifacts/packages/wendao-ios-simulator.zip
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -86,6 +90,8 @@ jobs:
             artifacts/ios-native-*.xcresult/
             artifacts/ios-native-input-*.json
             artifacts/ios-cold-entry.json
+            artifacts/ios-ordinary-*.xcresult/
+            artifacts/ios-ordinary-entry.json
           retention-days: 14
 
   desktop:
@@ -106,6 +112,9 @@ jobs:
       - run: npm ci
       - run: npm run build:desktop
       - run: npm run test:desktop
+      - name: Verify ordinary macOS native first entry
+        if: runner.os == 'macOS'
+        run: npm run test:macos:ui
       - name: Match WebView2 driver and install our NSIS package
         if: runner.os == 'Windows'
         shell: pwsh
@@ -134,4 +143,7 @@ jobs:
             src-tauri/target/release/bundle/nsis/*.exe
             artifacts/windows-native/
             artifacts/windows-runtime/
+            artifacts/macos-ci-ui/result.json
+            artifacts/macos-ci-ui/runtime.json
+            artifacts/macos-ui-*.xcresult/
           retention-days: 14

@@ -99,6 +99,7 @@ if (
     "android-audit",
     "ios-sim",
     "ios-test",
+    "ios-ordinary-test",
     "ios-audit",
     "ios-device",
     "ios-signed",
@@ -110,7 +111,7 @@ if (
   ].includes(target)
 ) {
   console.error(
-    "Usage: node scripts/platform.mjs sync|android|android-test|android-audit|ios-sim|ios-test|ios-audit|ios-device|ios-signed|desktop|desktop-debug|desktop-test|desktop-audit|desktop-soak",
+    "Usage: node scripts/platform.mjs sync|android|android-test|android-audit|ios-sim|ios-test|ios-ordinary-test|ios-audit|ios-device|ios-signed|desktop|desktop-debug|desktop-test|desktop-audit|desktop-soak",
   );
   process.exit(1);
 }
@@ -199,7 +200,8 @@ if (target === "android" || target === "android-test" || target === "android-aud
 } else {
   if (process.platform !== "darwin")
     throw new Error("iOS 构建需要 macOS 与 Xcode。");
-  const testing = target === "ios-test" || target === "ios-audit";
+  const ordinaryTest = target === "ios-ordinary-test";
+  const testing = target === "ios-test" || target === "ios-audit" || ordinaryTest;
   const simulator = target === "ios-sim" || testing,
     signed = target === "ios-signed";
   let destination = simulator
@@ -253,6 +255,8 @@ if (target === "android" || target === "android-test" || target === "android-aud
     "-derivedDataPath",
     derived,
     ...(target === "ios-test" ? ["SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) STARTUP_TRACE"] : []),
+    ...(target === "ios-test" ? ["-skip-testing:PracticeUITests/PracticeUITests/testOrdinaryNativeFirstTeachingEntry"] : []),
+    ...(ordinaryTest ? ["-only-testing:PracticeUITests/PracticeUITests/testOrdinaryNativeFirstTeachingEntry"] : []),
     ...(audit ? [`SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) NATIVE_AUDIT${liveAudit ? " NATIVE_LIVE_AI" : ""}${extendedIOSAudit ? " NATIVE_SOAK" : ""}`, "-only-testing:PracticeUITests/PracticeUITests/testNativeRuntimeAudioAndFrames"] : []),
     ...(signed
       ? [
@@ -267,7 +271,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
           "-parallel-testing-enabled",
           "NO",
           "-resultBundlePath",
-          join(root, "artifacts", `ios-${audit ? "audit" : "native"}-${Date.now()}.xcresult`),
+          join(root, "artifacts", `ios-${ordinaryTest ? "ordinary" : audit ? "audit" : "native"}-${Date.now()}.xcresult`),
           "test",
         ]
       : ["build"]),
