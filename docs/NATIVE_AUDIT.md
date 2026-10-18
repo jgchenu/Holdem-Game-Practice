@@ -260,3 +260,9 @@ CI 将 SDK 导出的原生 PNG、事实 JSON 与 manifest 一并上传轻量附�
 新增按需基础绘图对照：DOM、Canvas2D、默认 WebGL 与保留缓冲区 WebGL 分别绘制相同绿色／白色色块，同时记录各自真实读取值。只有 audit/dev 中点击才创建，移除、开始连续验收或销毁界面时取消自己的循环并释放自己的上下文；不改 Phaser 渲染器。原生脚本在面板关闭后单独截图，结果待云端采集。普通前端17文件仍与 main13 相同；原生宏编译通过。首次浏览器执行被类型修正触发的热重载打断，失败 trace 已保留在 `artifacts/macos-basic-surface-interrupted/`，未算整轮成功；冻结后四种配置通过并实际查看移动 WebKit 与320px截图（`artifacts/macos-basic-surface-frozen-browser.log`）。
 
 基础对照补充清理回归：四种浏览器配置均确认开始连续验收后对照 DOM 已移除，随后显式停止该轮并断言 failed／本轮未完成，不把取消操作称为完成65秒采样。最终日志为 `artifacts/macos-basic-surface-final-browser.log`（4 passed）。
+
+### f1e2368：简单 WebGL 也无法出现在云端原生截图
+
+[39154937875](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39154937875) 已结束：普通像素门禁失败、独立采集1项通过。实际查看 `artifacts/macos-f1e2368-compact/macos-xctest-soak/8e56c338-613e-4654-8a86-5cbf41078a19/attachments/6E26616A-52D2-4841-8D60-6A8D1C14A270.png`：DOM 和 Canvas2D 绿色/白色方块可见；默认与 preserveDrawingBuffer=true 的两个简单 WebGL 方块均不可见。probe.json 中三种画布的中心实际读取均为255,255,255,255，两种 WebGL 上下文创建成功、保留属性分别为false/true。因此问题不局限于 Phaser 或牌桌祖先布局；保留缓冲区也未使此原生截图出现 WebGL。不能仅据此断言物理显示器实际没有呈现。
+
+下一轮只增加测试端的 [ScreenCaptureKit 窗口截图](https://developer.apple.com/documentation/ScreenCaptureKit/SCScreenshotManager/captureImage(contentFilter:configuration:completionHandler:)) 对照：先观察已有录屏授权，未授权则只记录 authorized=false，不请求授权或修改权限。授权存在时，按独立 App 的精确 bundle URL、唯一 PID、bundle identifier 和主窗口筛选，仅截取本次长测 App 自己的窗口。结果和错误保存在 probe.json 的 screenCaptureKit 字段，成功图片作为 XCTest 附件；不替代普通像素门禁或长测。SDK 宏编译通过（`artifacts/macos-composited-capture-build.log`），实际授权与捕获结果待云端验证。

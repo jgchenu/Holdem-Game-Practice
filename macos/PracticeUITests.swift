@@ -1,5 +1,7 @@
 import XCTest
 import AppKit
+import ScreenCaptureKit
+import ImageIO
 
 @MainActor
 final class PracticeUITests: XCTestCase {
@@ -23,6 +25,48 @@ final class PracticeUITests: XCTestCase {
         hide.click()
         let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: hide)
         XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 10), .completed, "The diagnostic panel must actually close before capturing the table")
+    }
+
+    private func captureOwnWindow(_ owned: URL, output: URL) -> [String: Any] {
+        // Observe existing authorization only; never request or change system permission.
+        guard CGPreflightScreenCaptureAccess() else { return ["authorized": false, "captured": false] }
+        let matches = NSRunningApplication.runningApplications(withBundleIdentifier: "com.wendao.poker.soak.desktop").filter { $0.bundleURL?.standardizedFileURL == owned.standardizedFileURL }
+        guard matches.count == 1 else { return ["authorized": true, "captured": false, "error": "No unique owned App process"] }
+        let pid = matches[0].processIdentifier
+        let finished = expectation(description: "Capture the isolated App window with ScreenCaptureKit")
+        let status = output.appendingPathComponent("composited-window.json")
+        let imageFile = output.appendingPathComponent("composited-window.png")
+        SCShareableContent.getExcludingDesktopWindows(true, onScreenWindowsOnly: true) { content, error in
+            @Sendable func finish(_ value: [String: Any]) {
+                try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]).write(to: status, options: .atomic)
+                finished.fulfill()
+            }
+            guard let window = content?.windows.filter({ $0.owningApplication?.processID == pid && $0.owningApplication?.bundleIdentifier == "com.wendao.poker.soak.desktop" && $0.windowLayer == 0 && $0.frame.width > 100 && $0.frame.height > 100 }).max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }) else {
+                finish(["authorized": true, "captured": false, "error": error?.localizedDescription ?? "Owned window not found"]); return
+            }
+            let filter = SCContentFilter(desktopIndependentWindow: window)
+            let configuration = SCStreamConfiguration()
+            configuration.width = Int(window.frame.width * CGFloat(filter.pointPixelScale))
+            configuration.height = Int(window.frame.height * CGFloat(filter.pointPixelScale))
+            configuration.showsCursor = false
+            SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration) { image, error in
+                guard let image, let destination = CGImageDestinationCreateWithURL(imageFile as CFURL, "public.png" as CFString, 1, nil) else {
+                    finish(["authorized": true, "captured": false, "error": error?.localizedDescription ?? "No captured image"]); return
+                }
+                CGImageDestinationAddImage(destination, image, nil)
+                finish(["authorized": true, "captured": CGImageDestinationFinalize(destination), "width": image.width, "height": image.height, "windowID": window.windowID])
+            }
+        }
+        guard XCTWaiter.wait(for: [finished], timeout: 20) == .completed,
+              let data = try? Data(contentsOf: status),
+              let record = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return ["authorized": true, "captured": false, "error": "Capture did not complete with a status record"]
+        }
+        if record["captured"] as? Bool == true, let image = NSImage(contentsOf: imageFile) {
+            let attachment = XCTAttachment(image: image)
+            attachment.name = "screencapturekit-owned-basic-surfaces"; attachment.lifetime = .keepAlways; add(attachment)
+        }
+        return record
     }
 
     // Check actual captured card pixels, separately from the canvas accessibility label.
@@ -211,11 +255,12 @@ final class PracticeUITests: XCTestCase {
             XCTAssertTrue(controls.waitForExistence(timeout: 10))
             let basicScreen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             basicScreen.name = "native-basic-dom-2d-webgl-controls"; basicScreen.lifetime = .keepAlways; add(basicScreen)
+            let compositedWindow = captureOwnWindow(owned, output: output)
             open.click(); button(app, containing: "移除基础画布").click(); closeAudit(app)
             XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: controls)], timeout: 10), .completed)
             try write("probe.json", ["runID": runID, "facts": facts, "nativeCardPixelsBeforeProbe": nativePixels,
                 "nativeCardPixelsAfterReadback": lightCardPixels(restored), "tableFrameBeforeProbe": tableFrameBefore,
-                "appFrameBeforeProbe": appFrameBefore, "appStateBeforeProbe": appStateBefore, "compositorScreens": comparisons, "basicSurfaceFacts": basicFacts])
+                "appFrameBeforeProbe": appFrameBefore, "appStateBeforeProbe": appStateBefore, "compositorScreens": comparisons, "basicSurfaceFacts": basicFacts, "screenCaptureKit": compositedWindow])
             print("Renderer facts collected; does not turn a failed ordinary screenshot into a pass")
             return
         }
