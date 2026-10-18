@@ -13,9 +13,23 @@ final class PracticeUITests: XCTestCase {
     func testNativePracticeMentorAndRelaunchPersistence() throws {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")
+        let coldStart = Date()
         app.launch()
+        let initial = XCTAttachment(screenshot: app.screenshot())
+        initial.name = "ios-cold-start-initial"
+        initial.lifetime = .keepAlways
+        add(initial)
         let mentor = app.buttons["请教青玄师父"]
-        XCTAssertTrue(mentor.waitForExistence(timeout: 20))
+        // A fresh CI simulator's first WebKit navigation took ~26s in the
+        // retained native log. Keep functional readiness separate from the
+        // device startup performance acceptance gate; do not restart the app.
+        let ready = mentor.waitForExistence(timeout: 60)
+        let startup = XCTAttachment(screenshot: app.screenshot())
+        startup.name = ready ? "ios-cold-start-ready" : "ios-cold-start-not-ready"
+        startup.lifetime = .keepAlways
+        add(startup)
+        print("Native first-launch readiness: \(Date().timeIntervalSince(coldStart))s; simulator functional check, not a phone performance result")
+        XCTAssertTrue(ready, "The first native process must render the practice UI without a relaunch")
         let start = button(app, containing: "入席修炼")
         let resume = button(app, containing: "继续修炼")
         if start.exists { start.tap() }

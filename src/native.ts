@@ -1,6 +1,16 @@
 import { Capacitor } from "@capacitor/core";
 import { flushStorage, initializeStorage } from "./storage";
 
+export async function dismissLaunchScreen() {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const { SplashScreen } = await import("@capacitor/splash-screen");
+    await SplashScreen.hide({ fadeOutDuration: 200 });
+  } catch (error) {
+    console.error("Native launch screen could not be dismissed", error);
+  }
+}
+
 export async function initializePlatform(): Promise<() => void> {
   await initializeStorage();
   if (!Capacitor.isNativePlatform()) return () => {};

@@ -1,5 +1,5 @@
 import "./style.css";
-import { initializePlatform } from "./native";
+import { dismissLaunchScreen, initializePlatform } from "./native";
 import { initializeOffline } from "./offline";
 import { prepareFonts } from "./fonts";
 
@@ -20,4 +20,8 @@ try {
   document
     .querySelector("#boot-retry")!
     .addEventListener("click", () => location.reload());
+} finally {
+  // Keep native artwork visible through the first WebView navigation. Release
+  // it after either the game UI or the recoverable error screen is mounted.
+  await dismissLaunchScreen();
 }

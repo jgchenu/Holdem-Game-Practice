@@ -12,6 +12,13 @@ const config: CapacitorConfig = {
   },
   android: { backgroundColor: "#13271e", allowMixedContent: false },
   plugins: {
+    SplashScreen: {
+      launchAutoHide: false,
+      backgroundColor: "#13271e",
+      showSpinner: true,
+      iosSpinnerStyle: "small",
+      spinnerColor: "#ceb678",
+    },
     SystemBars: { style: "DARK", initialViewportFitValueHint: "cover" },
   },
 };

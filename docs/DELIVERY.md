@@ -92,7 +92,11 @@ Windows 新增在下一手进行中暂停、记录手牌和灵石、按自身 PI
 
 4d5b219 的 [39083719029](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39083719029) 中，Windows、macOS、Android 成功；整轮仍失败。Web 51 项通过、1 项在 Linux WebKit 启动前失败：中文用例名进入配置目录参数，启动器在 C locale 下报 `Invalid byte sequence in conversion input`。现使用独立临时配置目录，两次启动仍共用同一目录；不跳过 WebKit，也不改变恢复断言。macOS 本机两种引擎重开回归 2 项通过（另两种重复尺寸主动跳过），日志为 `artifacts/browser-profile-path-fix.log`。
 
-iOS 同轮在 Xcode 首次启动应用超时，未进入功能断言；本机原生 2 项通过的证据保持独立记录。现先用本机 Xcode 的 `simctl bootstatus <id> -b` 确认测试模拟器完成初次启动和迁移，再交给 XCTest；未增加忽略失败或自动重试。CI 即使 iOS 测试失败也保留 xcresult，便于核对后续失败。本机更新后的 iOS 2 项 XCTest 通过（`artifacts/ios-bootstatus-regression.log`、`artifacts/ios-native-1792284749805.xcresult`），规则/服务/平台 20 项及服务端类型检查通过；当前修改的云端结果仍待执行。
+iOS 同轮在 Xcode 首次启动应用超时，未进入功能断言；本机原生 2 项通过的证据保持独立记录。现先用本机 Xcode 的 `simctl bootstatus <id> -b` 确认测试模拟器完成初次启动和迁移，再交给 XCTest；未增加忽略失败或自动重试。CI 即使 iOS 测试失败也保留 xcresult，便于核对后续失败。本机更新后的 iOS 2 项 XCTest 通过（`artifacts/ios-bootstatus-regression.log`、`artifacts/ios-native-1792284749805.xcresult`），规则/服务/平台 20 项及服务端类型检查通过；b92b6cf 的 [39084475523](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39084475523) 中，Web（52 项及离线 4 项）、Android、macOS、Windows 成功；iOS 试炼通过，但首次启动未在 20 秒内出现师父按钮，整轮失败。此次 xcresult 已成功保留并下载到 `artifacts/ios-b92b6cf-run/`。原生日志显示第一轮 WebView 于约 26 秒后完成页面加载，随后 Preferences、Phaser 初始化正常；失败录屏确认之前为空白，不能称为启动体验通过。
+
+首次启动功能测试改为最多等待 60 秒，并记录包含原生启动的耗时及就绪/失败截图；不重启、不跳过首次启动，也不改变后续操作与进程恢复断言。这是功能就绪窗口的调整，**不是启动耗时优化或性能通过**。需要真机检查首次启动体验，若实际设备仍有明显空白或慢启动，必须继续修复。后续 CI 尚待执行。
+
+实际体验另行补齐：接入官方 `@capacitor/splash-screen` 8.0.2，原生启动图保持到游戏界面或可重试错误画面准备完成，再淡出；加载期间保留墨青「道」字图与金色指示器，避免首轮 WebView 导航只剩空白背景。它不缩短系统首次 WebKit 初始化。依据 [Capacitor 启动画面文档](https://capacitorjs.com/docs/apis/splash-screen#hiding-the-splash-screen)。本机 iOS 2 项通过，初始截图实际捕捉到启动图向牌桌淡出的过渡（`artifacts/ios-native-splash-attachments/`、`artifacts/ios-native-1792286268851.xcresult`）；本轮 Android 仪器与强制停止恢复通过（8941 → 9040，`artifacts/android-native-splash-regression.log`）；浏览器 52 项、离线 4 项、单元 20 项与服务端类型检查通过；未签名 iPhone App 和 macOS App / DMG 重建通过。对应日志为 `artifacts/e2e-native-splash.log`、`artifacts/offline-native-splash.log`、`artifacts/unit-native-splash.log`、`artifacts/server-native-splash.log`、`artifacts/ios-device-native-splash.log`、`artifacts/macos-native-splash.log`。云端复验尚待最终结果。
 
 ## 可重复执行
 
