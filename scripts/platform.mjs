@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { isolatedEmulator } from "./android-test-device.mjs";
 import { randomUUID } from "node:crypto";
 import { parseAndroidAudit } from "./native-audit-log.mjs";
+import { collectIosNativeInput } from "./ios-native-input.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const target = process.argv[2];
@@ -274,17 +275,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
     // Save the app's passive UIKit observer even when XCTest fails. No input
     // is injected here, and the original xcodebuild result is left unchanged.
     const file = join(root,"artifacts",`ios-native-input-${Date.now()}.json`);
-    const container = spawnSync("xcrun",["simctl","get_app_container",testDeviceUDID,"com.wendao.poker","data"],{encoding:"utf8",timeout:5000});
-    let entries=null, readError, rawLog, rawRecordCount=0;
-    try {
-      if(container.status!==0)throw new Error(container.error?.message || container.stderr || "Test app container is unavailable");
-      rawLog = readFileSync(join(container.stdout.trim(),"Library","Caches","wendao-native-input.jsonl"),"utf8");
-      const records = rawLog.trim().split("\n").filter(Boolean).map(line=>JSON.parse(line));
-      rawRecordCount = records.length;
-      entries = records.filter(record=>typeof record.atUnixMs==="number"&&record.atUnixMs>=nativeInputStartedAt);
-    } catch(error) { readError=error.message; }
-    const observerInstalled=Array.isArray(entries)&&entries.some(record=>record.event==="observer-ready");
-    writeFileSync(file,JSON.stringify({device:testDeviceUDID,runStartedAtUnixMs:nativeInputStartedAt,captureSucceeded:observerInstalled,observerInstalled,status:container.status,error:readError,rawRecordCount,excludedOlderRecords:entries===null?null:rawRecordCount-entries.length,entries,rawLog:entries===null?rawLog:undefined,scope:"Existing outer UIScrollView pan recognizer and test-build installation markers only, exported from this test app's known cache file and limited to this run. No recognizer or cancellation behavior is changed; absence of a pan event does not identify another recognizer."},null,2)+"\n");
+    writeFileSync(file,JSON.stringify(collectIosNativeInput(testDeviceUDID,nativeInputStartedAt),null,2)+"\n");
     console.log(`iOS native input log: ${file}`);
   } : undefined);
   console.log(

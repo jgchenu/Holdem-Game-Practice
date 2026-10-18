@@ -146,3 +146,17 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 本机工作树的三组独立套件全部通过，汇总为 `artifacts/ios-cold-entry.json`，每组 3 项通过 / 1 项按配置跳过，总计 9 项通过 / 3 项跳过，三个生成的设备均已清理。它不代表云端首次点击已解决，也不是手机性能测量。当前输入/教学/启动浏览器 36 项、输入/诊断 12 项、玩法 30 项（2 项按平台跳过）、单元 32 项与服务端类型检查通过。Android 原生与宿主强制停止恢复通过（4745 → 4851）；普通 iOS 模拟器及未签名设备构建通过。普通资源与 4 个原生 Mach-O 中的测试记录器标记检查在 `artifacts/hover-ordinary-build-scan.json`，138 个普通资源未发现凭据或 JS 验收标记，测试记录器未编译入普通二进制。日志导出只观察自身测试 App，不能作为手机 GPU 或用户 Mac 已解锁的证明。
 
 另已收齐 dfc5f92 Windows 原生终态：15 窗口、981,554 ms、62,796 个回调样本，各轮 P95 15.7 ms，最大 31.3 ms，超过 50 ms 为 0；完成态观测计数为 94，跨窗口可能包含边界重复。每轮 8 个归属进程均有真实正计数，私有字节 380,985,344 → 471,760,896，工作集 586,326,016 → 415,121,408 字节。本次没有发生重采，不能称为真实超时恢复路径已实跑；该路径目前由查询替身单元覆盖。来源 `artifacts/windows-dfc5f92-run/artifacts/windows-runtime/{result,soak}.json`，普通安装版检查也通过，原生 HTTP 上游仍为明确标识的替身。该轮 CI 总体仍因 iOS 首次触摸失败而失败。
+
+### 0912720 云端：功能通过，iOS 证据导出超时
+
+[39130694495](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39130694495) 的 iOS 第一台独立模拟器实际通过 3 项功能、主动跳过 1 项：首次教学、图鉴滚动、进度恢复与试炼没有测试失败。冷启动门禁仍失败，原因是测试后的 `simctl get_app_container` 超过采集脚本的 5 秒期限，未取得本轮原生观察器记录。失败记录：`artifacts/ios-0912720-run/ios-cold-entry.json`、`ios-native-input-1792329961127.json`，XCTest 原始包在同目录。后两套没有执行，不能将这一台功能通过描述成三套冷启动通过。
+
+云端 checkout 是 PR 合并提交 `74d06f91bbb805420ec64d0aa6db11aaafa214de`；GitHub API 返回的 tree 为 `50d87de56bb808a5bbd96ceb0997b4a304d410b0`，与本机 `0912720^{tree}` 相同。报告保留实际 checkout SHA，不将其误报为本机提交 SHA。
+
+证据采集现独立为 `scripts/ios-native-input.mjs`：查询期限 30 秒，仅在该只读查询返回 `ETIMEDOUT` 时允许再查询一次同设备、同 App 的路径；每次状态、耗时与错误都保留。连续超时、非超时错误、缺少文件或缺少本轮观察器标记仍使门禁失败，不沿用旧记录。不会重启 App、重试首次教学点击或重跑失败套件。新增 3 项查询替身回归，单元总计 35 项通过；这不等于云端已实际触发并通过新的重采路径。冷启动脚本也会在日志中直接输出失败原因，完整报告照常保存。
+
+本轮 Web 云端为 104 项通过、4 项按平台跳过，离线 6 项、单元 32 项通过（云端源码尚不包含新增采集单元）。候选 `artifacts/packages/candidate-0912720/` 保持 releaseReady=false；Web / Android / iOS 两类 App 的 17 个页面与资源文件逐字节一致。ZIP、APK 签名、iOS 可执行权限与 DMG 校验和通过；DMG 只读挂载后的文件字节扫描未发现凭据或诊断标记并已卸载，未解码嵌入/压缩资源，不代替原生窗口验证。
+
+采集改动后的本机原生回归：`artifacts/ios-collector-native.log` 中 3 项功能通过、1 项主动跳过；`artifacts/ios-native-input-1792330348372.json` 实际查询耗时 317 ms，一次成功，取得本轮 6 条记录并排除 12 条旧记录。原生查询本轮没有触发超时重采；不能用替身回归代称真实重采已测。随后普通模拟器构建通过（`artifacts/ios-collector-ordinary-build.log`），仅关闭本轮使用的自建 Hover Gate 模拟器。
+
+同轮 Windows 最终通过，记录 `artifacts/windows-0912720-run/summary.json` 及 `artifacts/windows-runtime/` 原始 JSON：15 个窗口 / 97 个完成态观测 / 982,850 ms 实际采样 / 62,884 次回调；各轮 P95 15.7 ms，最大 31.3 ms，超过 50 ms 间隔为 0。每轮 8 个进程的系统计数完整；组 Private Bytes 从 378,613,760 增至 464,764,928，Working Set 从 582,520,832 变为 408,784,896。不据此判断无泄漏。本轮没有任何重采样本。采用 Microsoft Basic Render Driver / D3D11 软件环境，数据不代表 GPU 呈现或手机性能。普通安装版原生检查及真实 HTTP 兼容替身检查通过，未将替身称为实际 DeepSeek。普通 NSIS 已补入 candidate-0912720，七份产物及校验和齐全；iOS 门禁和 Mac 原生剩余项仍使 releaseReady=false。

@@ -18,6 +18,7 @@ const template=candidates.find(device=>device.udid===process.env.IOS_TEST_DEVICE
 assert.ok(template,'An available iPhone runtime and device type are required');
 const report={passed:false,phase:'preparing',requestedSuites:3,completedSuites:0,runToken,
   sourceRevision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
+  sourceTree:execFileSync('git',['rev-parse','HEAD^{tree}'],{cwd:root,encoding:'utf8'}).trim(),
   worktreeStatus:execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).trim(),
   template:{runtime:template.runtime,deviceType:template.deviceTypeIdentifier},
   existingBootedDevices:candidates.filter(d=>d.state==='Booted').map(d=>d.udid),suites:[],
@@ -64,5 +65,5 @@ try{
     }
   }
   report.passed=true;report.phase='complete';
-}catch(error){report.error=String(error);report.phase='failed';process.exitCode=1;}
+}catch(error){report.error=String(error);report.phase='failed';console.error(report.error);process.exitCode=1;}
 finally{report.finishedAt=new Date().toISOString();save();process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
