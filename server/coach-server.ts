@@ -16,6 +16,7 @@ export interface CoachConfig {
   origins: string[];
   timeoutMs?: number;
   limitPerMinute?: number;
+  thinkingMode?: "enabled" | "disabled";
 }
 const tasks: Record<CoachTopic, string> = {
   situation: "用适合新手的中文解释当前局面，列出可选行动与应思考的问题。",
@@ -64,6 +65,8 @@ async function upstreamText(response: Response) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 export function createCoachServer(config: CoachConfig) {
+  if (config.thinkingMode !== undefined && !["enabled", "disabled"].includes(config.thinkingMode))
+    throw new Error("AI_THINKING 只能为 enabled、disabled 或留空");
   // Only server configuration can choose an upstream; clients cannot supply URLs, models or keys.
   const base = config.baseUrl
     ? new URL(
@@ -174,6 +177,7 @@ export function createCoachServer(config: CoachConfig) {
           model: config.model,
           stream: false,
           max_tokens: 600,
+          ...(config.thinkingMode ? { thinking: { type: config.thinkingMode } } : {}),
           messages: [
             { role: "system", content: system },
             {

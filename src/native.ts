@@ -5,7 +5,11 @@ export async function dismissLaunchScreen() {
   if (!Capacitor.isNativePlatform()) return;
   try {
     const { SplashScreen } = await import("@capacitor/splash-screen");
-    await SplashScreen.hide({ fadeOutDuration: 200 });
+    const fadeOutDuration = 200;
+    await SplashScreen.hide({ fadeOutDuration });
+    // Capacitor 8 resolves hide() when the native transition is scheduled,
+    // before its fade finishes. Keep the interface guard for that interval.
+    await new Promise<void>(resolve => setTimeout(resolve, fadeOutDuration));
   } catch (error) {
     console.error("Native launch screen could not be dismissed", error);
   }

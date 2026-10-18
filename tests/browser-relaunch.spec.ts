@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程和试炼', async ({ playwright, browserName }, info) => {
+test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程和试炼', async ({ playwright, browserName, baseURL }, info) => {
   test.skip(!['mobile', 'mobile-webkit'].includes(info.project.name), 'Cold-browser persistence is exercised once per engine at a mobile viewport');
   const type = playwright[browserName];
   // Linux WebKit's launcher can use the C locale, which rejects non-ASCII CLI
@@ -19,7 +19,7 @@ test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程�
       localStorage.setItem('wendao:learning:v1', '["ranks","actions","position"]');
     });
     const first = context.pages()[0] || await context.newPage();
-    await first.goto('http://localhost:5173/');
+    await first.goto(baseURL!);
     await expect(first.locator('#start')).toBeEnabled();
     await first.locator('#start').click();
     await expect(first.locator('#live-table')).toHaveAttribute('data-busy', 'false', { timeout: 15_000 });
@@ -41,7 +41,7 @@ test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程�
     expect(originalBrowser?.isConnected()).toBe(false);
     context = await type.launchPersistentContext(profile, options);
     const restored = context.pages()[0] || await context.newPage();
-    await restored.goto('http://localhost:5173/');
+    await restored.goto(baseURL!);
     await expect(restored.locator('#resume')).toBeEnabled();
     expect(await restored.evaluate(() => ({
       hand: document.querySelector('#live-table')!.getAttribute('aria-label'),

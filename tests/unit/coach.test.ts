@@ -83,6 +83,7 @@ test("兼容接口服务只传允许事实，服务器持有密钥，回传模�
     const body = JSON.parse(Buffer.concat(chunks).toString());
     assert.equal(body.model, "test-model");
     assert.equal(body.stream, false);
+    assert.equal("thinking" in body, false, "Generic providers must not receive a vendor-specific extension by default");
     const content = JSON.parse(body.messages[1].content);
     assert.equal(content.facts.heroCards.length, 2);
     assert.equal(JSON.stringify(content).includes("deck"), false);
@@ -184,5 +185,32 @@ test("模型超时和未配置都有明确错误，响应不泄露上游或密�
     );
   } finally {
     await close(missing);
+  }
+});
+
+test("DeepSeek 简短教学显式关闭思考，只返回最终解释", async () => {
+  let upstreamCalls = 0;
+  const upstream = createServer(async (req, res) => {
+    upstreamCalls++;
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const payload = JSON.parse(Buffer.concat(chunks).toString());
+    assert.equal(payload.model, "deepseek-flash");
+    assert.deepEqual(payload.thinking, { type: "disabled" });
+    assert.equal(payload.max_tokens, 600);
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ choices: [{ message: { content: "先看需要补多少，再决定是否继续。", reasoning_content: "不应向客户端透传的推理内容" } }] }));
+  });
+  const server = createCoachServer({ baseUrl: await listen(upstream), model: "deepseek-flash", apiKey: "server-only", thinkingMode: "disabled", origins: [] });
+  const url = await listen(server);
+  try {
+    const response = await fetch(url + "/api/coach", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic: "situation", snapshot: snapshot() }) });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.text, "先看需要补多少，再决定是否继续。");
+    assert.equal(JSON.stringify(result).includes("reasoning_content"), false);
+    assert.equal(upstreamCalls, 1);
+  } finally {
+    await close(server); await close(upstream);
   }
 });

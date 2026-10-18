@@ -2,6 +2,8 @@
 
 目标：完成移动端优先的《问道牌途》在 iOS、Android、Windows、macOS 和 Web 的开发与验证。美术与动效要求以根目录 AGENTS.md 为准。持续目标仍在进行，未实际执行的验收保持待办，构建通过不等于真机运行或性能通过。
 
+用户于 2026-10-18 明确选择直接使用 iOS / Android 模拟器验收，并指定 DeepSeek。后续按模拟器推进，不再等待连接真机；下表中的手机真机、签名安装及硬件性能列为额外未验证范围，不冒充已测通过。
+
 ## 共同能力
 
 - 独立扑克规则、加密随机洗牌、六人单人练习、七选五比牌、主池与边池、平局分池、未跟注返还。
@@ -25,6 +27,8 @@
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件，等待用户在本机 Xcode 登录并连接设备。
 
 ## 最近验证
+
+14ced63 的 [39101785367](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39101785367) 五平台 CI 全部成功，iOS 包含首次教学入口及续学的三项原生测试。当前追加 DeepSeek 配置、原生渐隐区间保护和隔离测试服务，使用下方独立证据继续复验，不以先前全绿替代新改动验证。
 
 7c517b0 的本机浏览器 60 项、生产离线 6 项、规则/服务/平台单元 21 项、Rust 文件 4 项及 iOS 原生 3 项通过；Android 模拟器与 macOS 实际窗口也验证了教学进度在进程重启后恢复。[39100789879](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39100789879) 中 Web、Android、macOS、Windows 成功；iOS 两项通过，新增教学用例首次点击未打开弹窗，整轮失败。修复与复验正在进行，不能称为五平台全部通过。上轮 3078cd1 的成功也不能代替新增教学验证。
 
@@ -130,9 +134,9 @@ Windows 测试采用安装后启动 App、测试进程显式启用本机端口�
 
 ## 剩余交付条件
 
-- 国内模型真实联调：提供服务 Base URL、模型名，在本机 `.env` 配置密钥；具体步骤见 `docs/AI.md`。目前仅验证兼容接口和模拟响应，未验证实际模型质量或延迟。
+- DeepSeek 本机网关与 Web 页面已真实联调；原生包联网环境与服务部署仍需分别验证。模型按 `deepseek-flash` 配置，详见 `docs/AI.md`。真实调用样本不代表持续质量或延迟保证。
 - 公网师父服务：账号鉴权、配额、持久限流、HTTPS、发布环境和相应隐私披露。当前服务是本机开发网关。
-- 真机与用户电脑验收、商店资料及签名发布；用户尚未要求实际提交商店或正式发布。
+- 额外范围：手机真机、用户电脑与签名发布未验收。用户已明确本轮使用手机模拟器，不再等待真机；未要求实际提交商店或正式发布。
 - 各平台音频、持续帧时间与内存、触控延迟。60 FPS 是目标，尚无真机测量结论。`web-perf` 技能要求的 Chrome DevTools MCP 未配置，专项性能审计未执行。
 
 真机步骤：记录型号和系统 → 安装、冷启动 → 玩三手（弃牌、加注、摊牌和复盘）→ 切后台再返回 → 结束进程再启动 → 核对手牌、灵石和课程进度 → 检查键盘、安全区和触控 → 音效、静音、来电恢复 → 持续帧时间和内存测量。每一项只在实际完成后填写结果。
@@ -164,3 +168,13 @@ Mac 已解锁，本轮通过实际原生窗口验证新版教学：原练习桌�
 补齐产品启动保护：主界面在依赖初始化、事件绑定和原生启动图收起结束前保持 `inert`，完成后才允许输入；失败时同样释放保护，保留重试入口。iOS 教学用例等待入口真实启用且可点击，首屏优先走「从零学德州」，复用模拟器有存档时走常驻入口；第一次点击后必须出现教学弹窗，未加重试或跳过首次进程。逐步教学操作也等待本步保存完成。另修复首屏次要按钮缺少样式造成的系统白底，并统一教学滚动条颜色。
 
 本机原生 XCTest 3 项通过（`artifacts/startup-input-gate-ios.log`、`artifacts/ios-native-1792302348768.xcresult`）；浏览器模拟原生启动图等待的输入保护专项 4 项通过（`artifacts/startup-input-gate-targeted-final.log`），规则/服务/平台 21 项及服务端类型检查通过。浏览器专项使用模拟桥接，不能当作 iOS 实测；完整跨平台复验与新版候选包待完成。
+
+### 本轮：DeepSeek 真实联调与测试服务隔离
+
+用户选择 DeepSeek 后，本机 `.env` 已配置官方 Base URL、当前模型 `deepseek-flash` 和 `AI_THINKING=disabled`，既有密钥保持在本机服务端。官方 `/models` 实际确认该模型可用；本机网关三个主题均 HTTP 200，固定合成手牌的响应数字与程序事实一致，耗时 1545 / 1323 / 1639 ms（`artifacts/deepseek-live-report.json`）。另在 390×844 WebKit 的独立测试页面真实请求「衡量价格」，返回模型解读，灵石不变；端到端 2046 ms，截图和报告为 `artifacts/deepseek-live-mobile-webkit.png`、`artifacts/deepseek-live-ui.json`。均为小样本，未承诺稳定延迟或整体教学质量。客户端 dist、iOS 与 Android public 共 82 个文件扫描未发现已配置的密钥。
+
+通用兼容接口不默认发送厂商扩展；配置 `AI_THINKING` 时才向上游传递 `thinking`，客户端仅收到最终解释，不透传推理字段。单元测试 22 项和服务端类型检查通过。
+
+14ced63 的本机整轮浏览器被用户更新 `.env` 触发的 Vite 重启打断；该轮不是通过结果，保留 `artifacts/startup-input-gate-browser.log` 和 `artifacts/startup-input-gate-interrupted-browser-evidence/`。浏览器测试现使用专用 5183 端口、不复用日常 5173 服务、不读取本机 `.env`、不代理到真实模型，并忽略原生构建与 artifacts 目录的文件变化。新隔离服务的启动、教学、独立浏览器恢复专项 14 项通过、2 项按项目有意跳过（`artifacts/deepseek-isolated-targeted.log`），完整回归执行中。
+
+核对本地 Capacitor SplashScreen 8.0.2 原生源码后确认：`hide()` 调用在原生渐隐被安排时即 resolve，并不等待动画完成。现让点击保护额外覆盖配置的 200 ms 渐隐区间，而非把桥接 promise 当成完成事件；功能等待不作为启动性能证明。此修改后的本机 iOS 三项 XCTest 通过（`artifacts/native-fade-gate-ios.log`、`artifacts/ios-native-1792303104392.xcresult`）；完整跨平台复验仍待最终结果。

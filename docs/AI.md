@@ -8,6 +8,8 @@
 
 使用兼容 Chat Completions 的国内服务。接口格式依据 [DeepSeek 官方接口说明](https://api-docs.deepseek.com/api/create-chat-completion/)；其他服务只要兼容相同的请求与响应结构，即可配置其 Base URL 和模型名。不要把模型名写死为过期型号，按服务商控制台选择。
 
+用户已选择 DeepSeek。当前示例为 `AI_BASE_URL=https://api.deepseek.com`、`AI_MODEL=deepseek-flash`、`AI_THINKING=disabled`（2026-10-18 核对官方文档，并由真实 `/models` 确认可用）。师父输出简短规则解释，显式使用非思考模式；[官方文档](https://api-docs.deepseek.com/guides/thinking_mode/)说明默认开启思考。其他兼容服务不支持此扩展时将 `AI_THINKING` 留空，网关就不发送 `thinking` 字段。
+
 1. 复制 `.env.example` 为本地 `.env`。
 2. 填写 `AI_BASE_URL`、`AI_MODEL` 和 `AI_API_KEY`。Base URL 填到版本前缀，例如 `https://api.deepseek.com` 或服务商给出的 `…/compatible-mode/v1`；程序自动追加 `chat/completions`。
 3. 运行 `npm run coach:serve`，用 `/health` 检查配置状态。它只返回是否配置，不回传密钥。
@@ -28,4 +30,5 @@
 
 - 单元与本机 HTTP 模拟上游：可见信息过滤、额外字段拒绝、直接价格、边池上限、兼容请求头与结构、未配置和超时错误已通过。
 - 浏览器：模型文本安全呈现、失败回退、关闭后保留同一手牌和灵石已通过；这里使用模拟响应，不是真实模型调用。
-- 国内模型真实联调：等待服务地址、模型名及本机密钥配置，尚未验证。
+- DeepSeek 真实联调：本机网关经官方服务实际完成「看懂局面」「衡量价格」「复盘思路」三次调用，均 HTTP 200；此固定合成测试的耗时分别为 1545 / 1323 / 1639 ms，来源为模型，数字与程序事实一致。报告位于 `artifacts/deepseek-live-report.json`。这是一次本机小样本联调，不能代表持续延迟、其他模型、原生包网络或整体教学质量。
+- 页面真实联调：390×844 的本机 WebKit 独立测试页面通过真实网关取得 DeepSeek 解读，灵石保持不变；端到端一次为 2046 ms。证据为 `artifacts/deepseek-live-mobile-webkit.png` 和 `artifacts/deepseek-live-ui.json`，并非手机真机或原生包联网证明。

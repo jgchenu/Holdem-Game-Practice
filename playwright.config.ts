@@ -10,14 +10,15 @@ export default defineConfig({
   reporter: "list",
   outputDir: "artifacts/test-results",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://localhost:5183",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --port 5173 --strictPort",
-    url: "http://localhost:5173",
-    reuseExistingServer: true,
+    command: "npm run dev -- --port 5183 --strictPort",
+    url: "http://localhost:5183",
+    reuseExistingServer: false,
+    env: { WENDAO_E2E: "1" },
   },
   projects: [
     {

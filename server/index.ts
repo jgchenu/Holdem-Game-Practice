@@ -6,6 +6,7 @@ const server = createCoachServer({
   baseUrl: process.env.AI_BASE_URL || "",
   model: process.env.AI_MODEL || "",
   apiKey: process.env.AI_API_KEY || "",
+  thinkingMode: (process.env.AI_THINKING || undefined) as "enabled" | "disabled" | undefined,
   origins: (
     process.env.COACH_ALLOWED_ORIGINS ||
     "http://localhost:5173,http://localhost:4173"
