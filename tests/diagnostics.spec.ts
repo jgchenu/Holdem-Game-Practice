@@ -71,6 +71,7 @@ test('画布诊断读取实际渲染器缓冲区，不改变当前手牌与灵�
   await page.screenshot({path:`artifacts/renderer-probe-${testInfo.project.name}.png`});
   const originalStyle=await page.locator('#live-table canvas').getAttribute('style');
   await page.getByRole('button',{name:'收起验收',exact:true}).click();
+  await expect(page.locator('#audit-panel')).toBeHidden();
   await page.screenshot({path:`artifacts/composite-baseline-${testInfo.project.name}.png`});
   for(const [variant,title] of [['isolation','对照隔离层'],['layer','对照独立层'],['outside','对照外置画布'],['restore','恢复画布布局']]){
     await page.getByRole('button',{name:'运行验收',exact:true}).click();
@@ -80,6 +81,7 @@ test('画布诊断读取实际渲染器缓冲区，不改变当前手牌与灵�
     expect(await canvas.evaluate(el=>el.parentElement?.id==='live-table')).toBe(variant!=='outside');
     expect({hand:await page.locator('#live-table').getAttribute('aria-label'),wallet:await page.locator('#wallet').textContent()}).toEqual(before);
     await page.getByRole('button',{name:'收起验收',exact:true}).click();
+    await expect(page.locator('#audit-panel')).toBeHidden();
     await page.screenshot({path:`artifacts/composite-${variant}-${testInfo.project.name}.png`});
   }
   expect(await page.locator('#live-table canvas').getAttribute('style')).toBe(originalStyle);

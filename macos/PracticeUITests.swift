@@ -18,6 +18,13 @@ final class PracticeUITests: XCTestCase {
         app.staticTexts.matching(diagnosticPredicate(text)).firstMatch
     }
 
+    private func closeAudit(_ app: XCUIApplication) {
+        let hide = button(app, containing: "收起验收")
+        hide.click()
+        let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: hide)
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 10), .completed, "The diagnostic panel must actually close before capturing the table")
+    }
+
     // Check actual captured card pixels, separately from the canvas accessibility label.
     private func lightCardPixels(_ bitmap: NSBitmapImageRep) -> Int {
         var count = 0
@@ -177,7 +184,7 @@ final class PracticeUITests: XCTestCase {
             record.name = "actual-renderer-probe-facts"; record.lifetime = .keepAlways; add(record)
             let after = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             after.name = "screen-with-labeled-backbuffer-readback"; after.lifetime = .keepAlways; add(after)
-            button(app, containing: "收起验收").click()
+            closeAudit(app)
             let restored = try XCTUnwrap(NSBitmapImageRep(data: table.screenshot().pngRepresentation))
             let original = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             original.name = "screen-original-canvas-after-readback"; original.lifetime = .keepAlways; add(original)
@@ -186,7 +193,7 @@ final class PracticeUITests: XCTestCase {
                 open.click(); button(app, containing: title).click()
                 let marker = diagnosticText(app, containing: "COMPOSITE {\"variant\":\"\(variant)\"")
                 XCTAssertTrue(marker.waitForExistence(timeout: 10))
-                button(app, containing: "收起验收").click()
+                closeAudit(app)
                 // Include the whole native screen because the outside case moves the original canvas.
                 let screen = XCUIScreen.main.screenshot()
                 let attachment = XCTAttachment(screenshot: screen)
@@ -226,7 +233,7 @@ final class PracticeUITests: XCTestCase {
             try write("round-\(cycle).json", ["runID": runID, "cycle": cycle, "summary": sample])
             acknowledged("round-\(cycle).ack")
         }
-        button(app, containing: "收起验收").click()
+        closeAudit(app)
         XCTAssertTrue(table.waitForExistence(timeout: 20))
         XCTAssertGreaterThan(try capturedCardPixels(table), 100, "Final hand must actually render")
         let beforeRestart = table.label

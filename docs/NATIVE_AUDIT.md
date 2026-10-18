@@ -240,3 +240,15 @@ CI 额外上传轻量 `macos-diagnostic-reports`（JSON 与 run.log），完整 
 [39151963130](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39151963130) 已结束，普通像素门禁仍失败，独立诊断在 `/private/tmp` 写入时同样返回 Code513。此前把问题局限于项目目录的判断不成立。实际检查本机生成的 Runner 签名权限，确认 `com.apple.security.app-sandbox=true`，仅有外部文件只读例外。现由 XCTest 使用自身 NSHomeDirectory 下的本轮 UUID 目录；宿主严格指向该 Runner 专属容器，归档后清理，不移除沙箱或扩大权限。该协议的云端执行仍待验证。
 
 CI 将 SDK 导出的原生 PNG、事实 JSON 与 manifest 一并上传轻量附件；录像和完整 xcresult 仍在原归档，避免为查看几张对照截图下载整个录像。
+
+### a36ad0b：Android 14 新手入口与恢复复核
+
+本机临时启动 Pixel_7 / API34 模拟器，普通安装版 Instrumentation 最终 XML 为 1 项通过、3 项专项阶段跳过、0 失败；原生触控记录含从零教学、关闭教学、入席、打开加注，均有 trusted down/up/click。随后两个进程死亡专项各明确报告 OK(1 test)，确认 PID5935 消失、以 PID6041 重启，手牌/灵石、课程、试炼印记、新手教学步骤均恢复。教学图鉴内容和步骤保存检查包含 DOM 操作，不能全部称为原生触控。
+
+原始 XML、logcat、APK 与重启日志已保存至 `artifacts/android-a36ad0b-validation/`；summary.json 记录 APK SHA256。普通前端 index/assets 17 文件与 main13 候选 APK 相同，Android 原生工程及构建/重启脚本也与 main13 无差异。旧 connected 和 process-death 数据已另存；本轮启动的模拟器已关闭。此为模拟器功能证据，不包含本轮持续性能、手机 GPU 帧率或硬件音频验收。
+
+### a36ad0b：报告协议通过，对照截图仍需排除遮挡
+
+[39152684668](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39152684668) 普通原生像素检查仍失败。独立采集 1 test 通过、0 失败，成功写入并归档 probe.json，确认沙箱容器协议可用；轻量附件也已包含原生 PNG 与事实 JSON。缓冲区手牌浅色采样点10430，读取前后原生手牌像素0。
+
+实际检查三种对照及恢复截图，发现图片中验收面板仍覆盖牌桌；原生脚本此前在点击收起后立即截取，没有等待控件真正消失。因此这些对照截图不能证明任何合成方案有效或无效。现统一在收起操作后等待该原生按钮不存在，再截图；浏览器对照也明确检查面板 hidden。此为采集修正，未修改普通渲染器或放宽像素门禁。
