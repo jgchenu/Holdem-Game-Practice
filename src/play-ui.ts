@@ -50,7 +50,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
       <div id="turn-panel" class="control-panel turn-actions" hidden><button id="fold" class="table-action fold-action">弃牌<small>放下此手</small></button><button id="call" class="table-action call-action">过牌<small>无需投入</small></button><button id="raise" class="table-action raise-action">加注<small>选择金额</small></button></div>
       <div id="wait-panel" class="control-panel" hidden><button id="resume" class="primary-button">继续修炼 →</button><p id="waiting" class="waiting-copy" hidden><span class="thinking-dot"></span>道友正在思考…</p></div>
       <div id="result-panel" class="control-panel result-actions" hidden><button id="review" class="review-button">本手复盘</button><button id="next" class="primary-button">下一手 →</button></div>
-      <div class="dock-note"><span id="save-status">本地保存 · 单人练习</span><button id="about">玩法说明 ⓘ</button></div>
+      <div class="dock-note"><span id="save-status" role="status">本地保存 · 单人练习</span><button id="about">玩法说明 ⓘ</button></div>
     </section>
   </main>
   <aside class="side-note"><span class="vertical-title">落子有声 · 行牌有意</span><div class="note-bottom"><span class="tiny-diamond">◇</span><p>输赢是一时，进退亦是修行。<br/>从看懂一手牌开始。</p><button id="study-desktop">进入修炼阁 →</button></div></aside></div>
@@ -180,7 +180,7 @@ function updateUI() {
       (navigator.onLine ? "本地保存 · 单人练习" : "本地保存 · 离线练习")
     : saved.corrupt && !hand
       ? "旧记录无法读取，请重新入席"
-      : "当前浏览器无法保存，请保持页面开启";
+      : "暂时无法保存，请保持牌局开启";
   get("progress").textContent = `${learned.length}/${lessons.length}`;
   button("study").setAttribute(
     "aria-label",
@@ -581,7 +581,7 @@ function renderQuestion() {
       if (!ok)
         get("study-body").insertAdjacentHTML(
           "beforeend",
-          '<p class="input-error">浏览器无法保存进度，当前页面仍可继续练习。</p>',
+          '<p class="input-error">暂时无法保存进度，本次仍可继续练习。</p>',
         );
     }
   });
@@ -621,7 +621,7 @@ function persistPreferences() {
   syncPreferences();
   get("settings-feedback").textContent = savePreferences(prefs)
     ? "偏好已保存到本设备。"
-    : "当前浏览器无法保存偏好，仅在本次生效。";
+    : "暂时无法保存偏好，仅在本次生效。";
 }
 button("sound").addEventListener("click", () => {
   prefs.sound = !prefs.sound;

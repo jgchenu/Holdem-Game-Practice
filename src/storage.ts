@@ -7,9 +7,11 @@ const keys = [
   "wendao:trials:v1",
 ];
 const memory = new Map<string, string>();
-let nativeStore:
-  | (typeof import("@capacitor/preferences"))["Preferences"]
-  | null = null;
+export interface PersistenceBackend {
+  get(options: { key: string }): Promise<{ value: string | null }>;
+  set(options: { key: string; value: string }): Promise<void>;
+}
+let nativeStore: PersistenceBackend | null = null;
 let pending = Promise.resolve();
 let healthy = true;
 function failed() {
@@ -39,12 +41,15 @@ export function writeStorage(key: string, value: string): boolean {
       .catch(failed);
     return healthy;
   }
-  return local;
+  return local && healthy;
 }
 export async function initializeStorage() {
-  if (!Capacitor.isNativePlatform()) return;
   try {
-    nativeStore = (await import("@capacitor/preferences")).Preferences;
+    if ('__TAURI_INTERNALS__' in window) {
+      nativeStore = await (await import('./desktop-storage')).desktopStorage();
+    } else if (Capacitor.isNativePlatform()) {
+      nativeStore = (await import("@capacitor/preferences")).Preferences;
+    } else return;
     for (const key of keys) {
       const previous = readStorage(key);
       const { value } = await nativeStore.get({ key });

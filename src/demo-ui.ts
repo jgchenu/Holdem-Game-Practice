@@ -151,7 +151,7 @@ function persistPreferences() {
   syncPreferences();
   get("settings-feedback").textContent = savePreferences(preferences)
     ? "偏好保存在本设备。样板尚未经过手机安装包实测。"
-    : "当前浏览器无法保存偏好，设置仅在本次体验中生效。";
+    : "暂时无法保存偏好，设置仅在本次体验中生效。";
 }
 sound.addEventListener("click", () => {
   preferences.sound = !preferences.sound;

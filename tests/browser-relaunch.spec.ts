@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { rm } from 'node:fs/promises';
 
 test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程和试炼', async ({ playwright, browserName }, info) => {
   test.skip(!['mobile', 'mobile-webkit'].includes(info.project.name), 'Cold-browser persistence is exercised once per engine at a mobile viewport');
@@ -46,5 +47,8 @@ test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程�
     await expect(restored.locator('[data-trial="free-check"]')).toContainText('已达成');
     await expect(restored.locator('.trial-progress')).toHaveText('问心试炼 1 / 3');
     await restored.screenshot({ path: `artifacts/browser-relaunch-${info.project.name}.png` });
-  } finally { await context.close(); }
+  } finally {
+    try { await context.close(); }
+    finally { await rm(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
+  }
 });

@@ -20,7 +20,8 @@
     "build:desktop": "node scripts/platform.mjs desktop",
     "brand": "node scripts/brand.mjs",
     "test:android": "node scripts/platform.mjs android-test",
-    "test:ios": "node scripts/platform.mjs ios-test"
+    "test:ios": "node scripts/platform.mjs ios-test",
+    "test:desktop": "node scripts/platform.mjs desktop-test"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",
@@ -28,6 +29,7 @@
     "@capacitor/core": "8.5.3",
     "@capacitor/ios": "8.5.3",
     "@capacitor/preferences": "8.0.1",
+    "@tauri-apps/api": "2.12.4",
     "phaser": "3.90.0"
   },
   "devDependencies": {

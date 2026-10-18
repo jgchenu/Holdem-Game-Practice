@@ -47,7 +47,8 @@ src/
 ├── session.ts         有版本的本地牌局存档、恢复校验与下一手
 ├── live-scene.ts      真实牌局的 Phaser 动画呈现
 ├── play-ui.ts         移动端操作、底部面板、暂停与复盘
-├── storage.ts         Web / 原生 Preferences 存储与迁移
+├── storage.ts         Web / 移动 Preferences / 桌面文件存储与迁移
+├── desktop-storage.ts 桌面原生存档命令适配
 ├── native.ts          原生后台、Android 返回键与写入同步
 ├── learning.ts        九课、三阶段解锁与学习进度
 ├── coach.ts           可见事实与规则指导，无策略评分
@@ -60,6 +61,8 @@ src/
 
 当前固定使用 Phaser 3.90 的已知 API，锁定依赖版本。牌桌每个设计单位使用两个渲染像素，避免直接跟随设备高 DPR 无限增大画布。动态期间使用 tween；静态纹理一次生成并复用；装饰粒子有数量上限。
 
+桌面存档写入应用数据目录中的受限原生文件，写入临时文件、同步后替换上一份记录；关键牌局行动等待原生写入确认。旧 WebView 存档在首次读取时迁移。iOS / Android 使用 Preferences，Web 使用本地存储；存储失败会持续显示提示。
+
 规则核心不依赖 Phaser、DOM 或存储 API。界面提交行动后，核心产生下一状态，动画只呈现该状态。完整牌局数据仅保存在单人客户端本地；`observe` 过滤掉其他玩家底牌、未发出的牌与烧牌，再交给策略和画面。未来多人模式必须把完整状态与裁定迁移至服务端，不能把本地存档当作防作弊机制。
 
 下注额为整数灵石。加注遵循本轮总投入，允许不足额全下；平分后的奇数灵石从庄位左侧开始，按顺时针发给平局赢家。规则参考 [PokerStars 德州扑克规则](https://www.pokerstars.com/poker/learn/lesson/texas-holdem-rules/) 与 [Poker TDA 的全下重开说明](https://www.pokertda.com/forum/index.php?topic=1477.0)。电脑对手是教学用启发式策略，不宣称达到求解器水平。
@@ -67,6 +70,7 @@ src/
 ## 验证边界
 
 - `npm run build` 执行类型检查与生产构建。
+- `npm run test:desktop` 构建前端并运行原生文件存档测试；需要 Rust 和当前桌面平台构建依赖。
 - `npm run test:unit` 检查牌型、行动规则、边池、不足额全下、信息隔离、存档与随机策略下的筹码守恒。
 - 首次运行浏览器测试需执行 `npx playwright install chromium webkit`；`npm run test:e2e` 覆盖 Chromium 的手机/窄屏/桌面尺寸及移动尺寸的 WebKit。
 - WebKit 和触控模拟是浏览器兼容验证，不等同于 iOS / Android 真机验证。

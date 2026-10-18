@@ -1,6 +1,6 @@
 // Native Windows CI test through Tauri's standard WebDriver bridge, not a browser substitute.
 import { spawn, execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, join } from "node:path";
 import assert from "node:assert/strict";
 
@@ -12,6 +12,9 @@ if (!existsSync(application))
   throw new Error(`Application missing: ${application}`);
 const output = resolve("artifacts/windows-native");
 mkdirSync(output, { recursive: true });
+const profiles = resolve("artifacts/.windows-test-profiles");
+mkdirSync(profiles, { recursive: true });
+const testProfile = mkdtempSync(join(profiles, "profile-"));
 writeFileSync(join(output, "result.json"), JSON.stringify({ passed: false, status: "not completed" }));
 // These are the native WebView2 capabilities used by Tauri's Windows bridge.
 // Start Microsoft's driver directly to preserve verbose launch diagnostics.
@@ -109,9 +112,9 @@ async function launchNative() {
       ...process.env,
       TAURI_WEBVIEW_AUTOMATION: "true",
       WENDAO_TEST_DEBUG_PORT: "9222",
-      WENDAO_TEST_PROFILE: resolve("artifacts/.windows-test-profile"),
+      WENDAO_TEST_PROFILE: testProfile,
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9222",
-      WEBVIEW2_USER_DATA_FOLDER: resolve("artifacts/.windows-test-profile"),
+      WEBVIEW2_USER_DATA_FOLDER: testProfile,
     },
   });
   appProcess.on("error", (error) => {

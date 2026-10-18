@@ -9,7 +9,7 @@
 - 九课三阶段、十八道练习、逐境解锁与学习进度、本手公开行动复盘；三场问心试炼使用真实规则，独立于随机练习桌。
 - 手机底部操作、加注确认、减少动态效果、暂停、存档恢复；损坏的结算记录被拒绝，旧版弃牌结算可迁移。
 - 师父面板先展示程序事实；兼容接口在服务端持有密钥，模型文本安全呈现，离线或失败时回退本地指引。
-- 原生 Preferences 存储桥接、Web 离线缓存与版本隔离更新、主屏幕安装清单、统一图标与启动画面。
+- 移动端 Preferences 与桌面原生文件存储桥接、Web 离线缓存与版本隔离更新、主屏幕安装清单、统一图标与启动画面。
 - 本地分发 OFL 授权宋体子集；Canvas 绘制前加载，字体或入口模块加载失败可回退或重试。
 
 ## 当前平台矩阵
@@ -20,7 +20,7 @@
 | iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；师父面板、试炼和进程终止再启动恢复 XCTest 2 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
 | Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器，原生自动化覆盖行动、加注、Activity 重建、完整动画、摊牌复盘、师父与试炼印记恢复；主机编排强制停止与新进程恢复通过 | 真机连接、低内存回收、音频、触控与持续性能 |
 | macOS | Tauri Apple Silicon App / DMG 可构建 | 本机已操作恢复、加注、翻牌、师父；最新窗口初始化的 GUI 复验待解锁 | 最新包窗口复验、音频、持续性能、签名公证 |
-| Windows | Tauri x64 NSIS 可构建 | Windows CI 实际安装并启动原生 App，通过加注、重载恢复、摊牌复盘、360px 窗口和试炼印记测试 | 用户电脑实际运行、音频与持续性能 |
+| Windows | Tauri x64 NSIS 可构建 | 历史 CI 实际安装通过核心操作；新增强制结束进程测试发现旧版存档回退，当前原生文件修复待新 CI 实跑 | 修复后的冷启动、用户电脑实际运行、音频与持续性能 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件，等待用户在本机 Xcode 登录并连接设备。
 
@@ -74,9 +74,19 @@ macOS App / DMG 已重建。生产离线回归 4 项通过，包含断网进入�
 
 Chromium 和 WebKit 新增关闭独立浏览器、从同一磁盘配置目录重新打开的用例：核对进行中手牌、灵石、课程及试炼印记。两种引擎各 1 项通过，另两种重复尺寸按项目主动跳过；日志为 `artifacts/browser-relaunch-final.log`。此前完整浏览器 46 项通过的证据继续保留，新整轮结果以当前提交的 CI 为准。
 
-Windows 新增在下一手进行中暂停、记录手牌和灵石、按自身 PID 强制终止 App 及子进程、确认旧调试端点消失、重新启动并核对存档与印记。仅作用于测试配置目录及本测试启动的进程，依据 [taskkill 官方参数](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill)。本机已做脚本语法检查；Windows 实跑仍待新一轮 CI，未将语法检查计为运行通过。
+Windows 新增在下一手进行中暂停、记录手牌和灵石、按自身 PID 强制终止 App 及子进程、确认旧调试端点消失、重新启动并核对存档与印记。仅作用于测试配置目录及本测试启动的进程，依据 [taskkill 官方参数](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill)。e974248 的 [39080795780](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39080795780) 实跑发现重启回到了上一手，下一手未保留；结果与截图位于 `artifacts/windows-e974248-run/artifacts/windows-native/`。该运行明确失败，不能继续用旧版重载测试代表完整进程恢复。
 
-49bdc5c 的五平台候选产物已收齐于 `artifacts/packages/candidate-49bdc5c/`，包括 Web ZIP、Android 调试 APK、iOS 模拟器与未签名设备 App ZIP、macOS arm64 DMG、Windows x64 NSIS。`manifest.json` 记录来源提交和验收边界，`SHA256SUMS.txt` 校验值已逐文件复核。Windows 包来自同提交成功的 CI；iOS 设备包仍需开发者签名，不能直接安装。该候选包的 Windows 证据覆盖重载恢复，新增整进程冷启动验证仍待执行。
+49bdc5c 的五平台候选产物已收齐于 `artifacts/packages/candidate-49bdc5c/`，包括 Web ZIP、Android 调试 APK、iOS 模拟器与未签名设备 App ZIP、macOS arm64 DMG、Windows x64 NSIS。`manifest.json` 记录来源提交和验收边界，`SHA256SUMS.txt` 校验值已逐文件复核。Windows 包来自同提交成功的 CI；iOS 设备包仍需开发者签名，不能直接安装。该候选包的 Windows 证据只覆盖重载恢复；后续冷启动发现回退问题，现保留用于复现，manifest 已标记不可作为正式发布版本。
+
+### 本轮：桌面原生文件检查点
+
+修复 Windows / macOS 仅依赖 WebView 本地存储的进程退出风险：原生命令只接受四个游戏存储键，限制大小，持有进程与文件锁，写入临时文件并同步后替换主记录；关键牌局行动等待原生写入确认。存档损坏或读写失败会明确报错，不覆盖坏记录，也不把内存中的临时练习误报为保存成功。原生命令在后台任务执行。桌面首次启动迁移旧记录，移动端继续使用 Preferences。
+
+本机 release Rust 文件测试 4 项通过，覆盖新实例读取、残留临时文件、覆盖写入、非法写入保留旧文件、损坏记录保护及并发键合并。完整浏览器 52 项通过、4 项按项目有意跳过，包含 Chromium / WebKit 的独立进程重开和四种配置的存储失败提示。失败提示用例明确模拟 IPC 不可用，不能代表原生磁盘运行。规则/服务/平台测试 20 项及服务端类型检查通过。
+
+证据：`artifacts/desktop-store-release-tests.log`、`artifacts/native-store-full-browser.log`、`artifacts/native-store-unit.log`、`artifacts/storage-failure-mobile.png`。Android 本轮仪器及独立进程恢复流程通过（`artifacts/native-store-android.log`，新旧进程 7895 → 7992）；iOS XCTest 2 项通过（`artifacts/native-store-ios.log`、`artifacts/ios-native-1792283973574.xcresult`），未签名设备 App 与 macOS App / DMG 构建通过，生产离线 4 项通过（分别为 `artifacts/native-store-ios-device.log`、`artifacts/native-store-macos.log`、`artifacts/native-store-offline.log`）。macOS 界面复验仍因锁屏未执行。CI 新增 macOS / Windows 上的原生文件测试；修复后的 Windows 安装包强制结束进程恢复尚待当前提交实跑。
+
+实现使用 [Tauri 原生命令](https://v2.tauri.app/develop/calling-rust/)、[Rust 文件同步与锁](https://doc.rust-lang.org/std/fs/struct.File.html) 和 [文件替换](https://doc.rust-lang.org/std/fs/fn.rename.html)。测试涉及进程结束；不宣称覆盖系统断电或硬件故障。
 
 ## 可重复执行
 
@@ -93,6 +103,7 @@ npm run test:ios
 npm run build:ios-device   # 未签名；还不能直接安装
 APPLE_TEAM_ID=你的团队ID npm run build:ios-signed
 npm run build:desktop     # macOS App/DMG；Windows NSIS
+npm run test:desktop      # 原生文件存档测试
 ```
 
 平台脚本在共享 Web 构建、原生同步和原生构建期间持有构建锁，避免资源被并发覆盖。CI 各平台使用独立任务。Android 脚本只测试本应用，避免误运行依赖库的旧测试。测试构建强制禁用远程师父地址，不调用可能计费的模型。

@@ -79,14 +79,20 @@ if (
     "ios-signed",
     "desktop",
     "desktop-debug",
+    "desktop-test",
   ].includes(target)
 ) {
   console.error(
-    "Usage: node scripts/platform.mjs sync|android|android-test|ios-sim|ios-test|ios-device|ios-signed|desktop|desktop-debug",
+    "Usage: node scripts/platform.mjs sync|android|android-test|ios-sim|ios-test|ios-device|ios-signed|desktop|desktop-debug|desktop-test",
   );
   process.exit(1);
 }
 if (target.startsWith("desktop")) {
+  if (target === "desktop-test") {
+    run(npm, ["run", "build"]);
+    run("cargo", ["test", "--locked", "--release", "--manifest-path", "src-tauri/Cargo.toml", "--lib"]);
+    process.exit(0);
+  }
   run(npx, [
     "tauri",
     "build",

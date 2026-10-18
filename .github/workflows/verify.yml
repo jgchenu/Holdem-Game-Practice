@@ -100,6 +100,7 @@ jobs:
       - run: rustup default stable
       - run: npm ci
       - run: npm run build:desktop
+      - run: npm run test:desktop
       - name: Match WebView2 driver and install our NSIS package
         if: runner.os == 'Windows'
         shell: pwsh
