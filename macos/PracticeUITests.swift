@@ -2,6 +2,12 @@ import XCTest
 
 @MainActor
 final class PracticeUITests: XCTestCase {
+    // macOS WebKit exposes visible button text as title; aria-label can be
+    // exposed separately as label. Keep the same real control and first click.
+    private func button(_ app: XCUIApplication, containing text: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "title CONTAINS %@ OR label CONTAINS %@", text, text)).firstMatch
+    }
+
     func testOrdinaryFirstTeaching() throws {
         continueAfterFailure = false
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
@@ -17,7 +23,7 @@ final class PracticeUITests: XCTestCase {
         let app = XCUIApplication(url: URL(fileURLWithPath: path))
         app.launch()
         defer { app.terminate() }
-        let entry = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "从零学德州")).firstMatch
+        let entry = button(app, containing: "从零学德州")
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: entry)
         let result = XCTWaiter.wait(for: [ready], timeout: 60)
         if result != .completed { print(app.debugDescription) }
@@ -29,7 +35,7 @@ final class PracticeUITests: XCTestCase {
         let image = XCTAttachment(screenshot: app.screenshot())
         image.name = "macos-ci-ordinary-first-teaching"; image.lifetime = .keepAlways; add(image)
         app.buttons["关闭新手教学"].click()
-        let start = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "入席修炼")).firstMatch
+        let start = button(app, containing: "入席修炼")
         let actionable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: start)
         XCTAssertEqual(XCTWaiter.wait(for: [actionable], timeout: 30), .completed)
         start.click()

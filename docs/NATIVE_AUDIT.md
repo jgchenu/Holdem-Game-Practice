@@ -192,3 +192,7 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 新增独立 macOS XCTest 工程，CI 中仅启动普通 App 的专用副本，检查首次教学点击及真实发牌；启动前核对副本全部文件与链接，结束只关闭该副本。本机只允许 build-only，已编译通过并验证本地运行保护；尚未在 CI 执行，不计为原生功能通过或 15 轮长测。外部 App URL 初始化依据 [Apple XCUIApplication 文档](https://developer.apple.com/documentation/xcuiautomation/xcuiapplication)。不修改系统安全或辅助功能权限。
 
 用户已确认解锁 Mac，原独立长测窗口观察为暂停状态。此前 10 轮保留为中断结果，完整新一轮尚待执行；解锁不改变旧报告的未通过状态。
+
+### ba83680 macOS CI 探针首次结果
+
+`artifacts/macos-ba83680-job.log` 的原生层级确认普通教学入口已存在，显示文字位于 macOS WebKit 的 Button.title（「从零学德州 →」），没有对应 label。初版探针只按 label 匹配，等待 60 秒后失败，未点击入口，不能算普通教学通过。现改为在同一按钮查询中接受 title 或 label；保持启用且可点击、首次真实点击与打开教学断言，不增加点击或启动重试。修改后的运行仍待验证。
