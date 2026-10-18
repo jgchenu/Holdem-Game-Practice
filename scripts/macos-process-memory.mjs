@@ -6,6 +6,15 @@ import assert from 'node:assert/strict';
 const validIds = ids => Array.isArray(ids) && ids.length === 2 && ids.every(id => Number.isSafeInteger(id) && id > 0);
 const sameIds = (a,b) => validIds(a) && validIds(b) && a.every((id,i) => id === b[i]);
 
+export function validateMacSoakRound(sample, previousStarts = 0) {
+  for (const key of ['elapsedMs','frames','busyFrames','completedHands','starts','p50Ms','p95Ms','p99Ms','maxMs','busyP95Ms','gapsOver50Ms']) assert.ok(Number.isFinite(sample[key]), `Missing finite ${key}`);
+  assert.ok(sample.elapsedMs >= 65000 && sample.frames >= 1000 && sample.busyFrames >= 30 && sample.completedHands >= 2, 'Incomplete native round');
+  assert.ok(sample.starts > previousStarts, 'Real audio starts must increase');
+  assert.ok(sample.p50Ms >= 0 && sample.p50Ms <= sample.p95Ms && sample.p95Ms <= sample.p99Ms && sample.p99Ms <= sample.maxMs && sample.busyP95Ms >= 0 && sample.busyP95Ms <= sample.maxMs && sample.gapsOver50Ms >= 0, 'Invalid cadence summary');
+  assert.deepEqual(sample.audioStates, ['suspended']);
+  assert.equal(sample.quality, 'fine');assert.equal(sample.reducedMotion, false);
+}
+
 /** Kernel ownership, including helpers whose name/parent does not resemble the app. */
 export function selectMacProcessGroup(rows, rootPid) {
   const root = rows.find(p => p.pid === rootPid);

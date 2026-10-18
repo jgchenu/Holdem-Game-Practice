@@ -33,6 +33,7 @@ try{
  if(!buildOnly)report.resultBundle=resultPath;
  const args=['-project','macos/PracticeUITests.xcodeproj','-scheme','PracticeUITests','-destination','platform=macOS',
   '-derivedDataPath',join(output,'DerivedData'),'CODE_SIGN_IDENTITY=-','-parallel-testing-enabled','NO',
+  '-only-testing:PracticeUITests/PracticeUITests/testOrdinaryFirstTeaching',
   ...(buildOnly?['build-for-testing']:['-resultBundlePath',resultPath,'test'])];
  const child=spawnSync('xcodebuild',args,{cwd:root,stdio:'inherit'});
  report.exitCode=child.status;report.signal=child.signal;

@@ -196,3 +196,13 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 ### ba83680 macOS CI 探针首次结果
 
 `artifacts/macos-ba83680-job.log` 的原生层级确认普通教学入口已存在，显示文字位于 macOS WebKit 的 Button.title（「从零学德州 →」），没有对应 label。初版探针只按 label 匹配，等待 60 秒后失败，未点击入口，不能算普通教学通过。现改为在同一按钮查询中接受 title 或 label；保持启用且可点击、首次真实点击与打开教学断言，不增加点击或启动重试。修改后的运行仍待验证。
+
+### Mac 截图像素门禁与专用 XCTest 长测驱动
+
+13cf180 云端普通客户端首次教学、关闭教学和发牌状态测试 1 项通过，实际 checkout 的 tree 与该提交一致。截图 `artifacts/macos-13cf180-attachments/6606B0BD-B441-47E2-B87D-B4FF116E14A9.png` 中牌桌画布空白，不能将手牌无障碍文字状态当作视觉通过。本机 ba83680 专用长测构建的 CUA 截图能实际看到桌面、头像与 4♣ / Q♠，13cf180 只改测试查询和文档；不因此推定云端空白的根因或完整渲染验收通过。核对记录为 `artifacts/macos-13cf180-visual-review.json`。
+
+普通 Mac 测试现补充原生截图的手牌区域像素检查，最多只读等待 20 秒，仍只有第一次实际教学点击；不重启、不重试输入。空背景拒绝、浅色卡牌样本通过，旧 CI 截图人工核对边界的牌桌区域读取为 0 个卡牌像素（`artifacts/macos-card-pixels-selfcheck.log`）。本机编译通过，新的完整普通客户端运行尚未验证；像素检查只证明区域非空，不等同完整美术质量或 GPU 帧率。
+
+新增独立 `scripts/macos-runtime-soak.mjs`，复用现有 XCTest 工程及内核进程归属采集器。Node 和 Swift 均核对专用 App 路径/标识；记录并复核 App 二进制、实际游戏输入差异、受保护审计 App 的哈希和 PID。使用随机 runID 的文件确认协议，冻结每轮 MEASURE 后才采样系统内存，采样成功后才允许下一轮；完整 15 轮之后还要检查实际卡牌像素和进程重启恢复。只选长测方法，普通 CI 仍单独选择教学方法。完整 AUDIT 长标签可能截断，未冒称导出了该完整原始数据。
+
+本机单元 38 项通过，含不完整样本、音频未暂停、无新增音频与缺失/无效回调统计的拒绝检查（`artifacts/macos-native-soak-final-unit.log`）；独立驱动 build-only 两次编译通过。实际启动尝试 `2c47bc5f-e105-40cc-b345-c6a899950d25` 在 XCTest 初始化时失败，日志为“认证已取消。System authentication is running.”，随后系统状态实际确认 IOConsoleLocked=true。没有进入测试、没有 baseline 或接受轮次，report.passed=false；受保护 App PID 40880 和二进制哈希前后相同。已请求用户解锁并完成开发工具认证，不自动修改系统安全权限。新驱动运行协议、15 轮采样、最终像素和重启恢复仍待实际验证。
