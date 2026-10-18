@@ -2,6 +2,8 @@
 
 目标：完成移动端优先的《问道牌途》在 iOS、Android、Windows、macOS 和 Web 的开发与验证。美术与动效要求以根目录 AGENTS.md 为准。持续目标仍在进行，未实际执行的验收保持待办，构建通过不等于真机运行或性能通过。
 
+当前矩阵、最近验证及剩余交付条件为现状；后面的历次增量保留旧失败和当时的待办，不能用历史状态替代当前结论。
+
 用户于 2026-10-18 明确选择直接使用 iOS / Android 模拟器验收，并指定 DeepSeek。后续按模拟器推进，不再等待连接真机；下表中的手机真机、签名安装及硬件性能列为额外未验证范围，不冒充已测通过。
 
 ## 共同能力
@@ -22,11 +24,15 @@
 | iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；教学续学、师父面板、试炼和进程终止再启动恢复 XCTest 3 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
 | Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器核心操作与进程恢复通过；实际 Web Audio 开关/后台恢复、精美画质持续帧间隔与真实 DeepSeek 回复已测，详见原生审计 | 长时与低内存回收、实际呈现/触控延迟；真机为额外范围 |
 | macOS | Tauri Apple Silicon App / DMG 可构建 | 实际窗口已复验存档、DeepSeek、音频静音与最小化恢复；精美画质 65.2 秒/6 手牌采样 P95 18 ms；原生文件测试通过 | 长时与完整进程组内存分析、签名公证 |
-| Windows | Tauri x64 NSIS 可构建 | 4dbdf67 的 Windows CI 实际安装版 14 项通过；原生进程恢复、音频开关、最小化恢复和 65 秒/6 手牌连续采样通过，原生文件测试通过 | 用户电脑实际运行、长时与完整进程组内存分析 |
+| Windows | Tauri x64 NSIS 可构建 | a001301 的 Windows CI 实际安装版 15 项通过；原生进程恢复、图鉴、音频开关、最小化恢复和 65 秒/7 手牌连续采样通过，原生文件测试通过 | 原生兼容 AI HTTP 联调、用户电脑实际运行、长时与完整进程组内存分析 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件。按用户后续选择，本轮使用模拟器，签名与真机记录保留为额外未验证范围。
 
 ## 最近验证
+
+客户端 a001301 的 [39110164930](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39110164930) 五平台作业全部成功：Web 单元 24、浏览器 84、离线 6 项通过（4 项按项目跳过）；iOS 常规 3 项通过，运行审计项按配置跳过；Android 构建、macOS 构建和原生文件测试、Windows 正式安装版 15 项与独立运行验收通过。当前 Windows 65.7 秒 / 7 手牌回调 P95 15.7 ms、最大 31.2 ms。六份同提交候选包位于 `artifacts/packages/candidate-a001301/`，`manifest.json` 和 `SHA256SUMS` 记录来源与完整性，未标成正式发布就绪。
+
+同一客户端另做本机原生运行：iOS XCTest 67.2 秒 / 5 手牌、真实音频和后台恢复通过，回调 P95 22 ms、最大 88 ms；随后在真实模拟器上由一次可信触摸启动 App 内置连续牌局，66.1 秒 / 6 手牌、P95 18 ms、最大 66 ms，超过 50 ms 一次。两次操作节奏和外部控件查询不同，不能据此认定单一原因或 GPU 优化。分别见 `artifacts/a001301-ios-runtime-attachments/CF4B9D1D-3907-440F-B5D4-0832BB6FB2DD.json`、`artifacts/a001301-ios-continuous-cua.json` 和同名 JPG。macOS 普通客户端也已实际打开图鉴、展开比较说明、观察窗口恢复后第一次继续没有额外投入，原手牌/底池和 960 灵石保留；见 `artifacts/a001301-macos-production-observation.json` 与 `artifacts/a001301-macos-production-guide.jpg`。
 
 牌型图鉴增量：教学每一步均可展开，第十步默认展开；保留原十二步索引和存档格式。九组示例牌及皇家同花顺、葫芦优先级、A 低顺、踢脚、花色平等和公共牌平手说明均以规则程序验证。单元 24 项、教学浏览器 12 项及生产构建通过；浏览器覆盖 Chromium 390×844、320×568、桌面与移动 WebKit，验证 45 张示例牌不溢出、底部继续按钮常驻、展开图鉴不改变教学进度和练习钱包。随后补齐教学安全区与启动失败重试，相关浏览器 28 项通过，日志为 `artifacts/native-guide-startup-browser.log`。图鉴已纳入新本机 iOS / Android 安装产物：iOS XCTest 3 项通过（运行审计按配置跳过），报告为 `artifacts/ios-native-1792310415021.xcresult`，截图为 `artifacts/ios-guide-safe-area-attachments/747EAC34-3841-4651-B8D4-8B258F58505D.png`；Android 图鉴和比较展开、原生进度隔离与进程恢复通过，主机进程 7607 → 7739，日志为 `artifacts/android-hand-guide.log`。这次还未发布新的六平台同源候选包。
 
@@ -142,14 +148,15 @@ npm run test:desktop      # 原生文件存档测试
 
 产物位置：Android `artifacts/packages/wendao-android-debug.apk`；iOS 模拟器 `artifacts/ios/Build/Products/Debug-iphonesimulator/App.app`；macOS `src-tauri/target/release/bundle/dmg/`；Windows 为 CI `desktop-windows-latest` 附件中的 NSIS 安装程序。CI 附件有保留期限，不等同正式发布。
 
-Windows 测试采用安装后启动 App、测试进程显式启用本机端口、EdgeDriver attach 的方式；正常启动不启用调试端口。早期 WebView2 会话失败已解决，失败运行仍保留在 CI 历史中。macOS 最新窗口初始化已构建，GUI 复验因界面工具报告锁屏而尚未完成。
+Windows 测试采用安装后启动 App、测试进程显式启用本机端口、EdgeDriver attach 的方式；正常启动不启用调试端口。早期 WebView2 会话失败已解决，失败运行仍保留在 CI 历史中。macOS 普通客户端和独立验收客户端均已有实际窗口证据，详见最近验证与原生验收记录。
 
 ## 剩余交付条件
 
-- DeepSeek 本机网关与 Web 页面已真实联调；原生包联网环境与服务部署仍需分别验证。模型按 `deepseek-flash` 配置，详见 `docs/AI.md`。真实调用样本不代表持续质量或延迟保证。
+- Android 触摸缺口已补齐：API 36 隔离模拟器通过 Instrumentation 注入真实 touchscreen down/up，首次教学、入席和加注均收到 isTrusted=true 的点击，未重试首次教学点击。新仪器检查及后续进程恢复通过，PID 5337 → 5528，证据为 `artifacts/android-native-touch.log`。其他仪器步骤仍有程序调用，不把整套检查都称为手势覆盖。
+- DeepSeek 本机网关、Web、iOS / Android / macOS 原生验收配置已真实联通。Windows 普通包的本地回退已测，但兼容接口的实际原生 HTTP 请求仍需单独验证，不能拿其他系统结果替代。模型按 `deepseek-flash` 配置，详见 `docs/AI.md`。真实调用样本不代表持续质量或延迟保证。
 - 公网师父服务：账号鉴权、配额、持久限流、HTTPS、发布环境和相应隐私披露。当前服务是本机开发网关。
 - 额外范围：手机真机、用户电脑与签名发布未验收。用户已明确本轮使用手机模拟器，不再等待真机；未要求实际提交商店或正式发布。
-- 各平台音频、持续帧时间与内存、触控延迟。60 FPS 是目标，尚无真机测量结论。`web-perf` 技能要求的 Chrome DevTools MCP 未配置，专项性能审计未执行。
+- 各平台已有音频和一分钟以上连续牌局的实际证据；长时内存、完整子进程组、GPU 呈现与触控延迟仍未完成。60 FPS 是目标，回调间隔不能作为手机硬件保证。`web-perf` 技能要求的 Chrome DevTools MCP 未配置，专项性能审计未执行。
 
 真机步骤：记录型号和系统 → 安装、冷启动 → 玩三手（弃牌、加注、摊牌和复盘）→ 切后台再返回 → 结束进程再启动 → 核对手牌、灵石和课程进度 → 检查键盘、安全区和触控 → 音效、静音、来电恢复 → 持续帧时间和内存测量。每一项只在实际完成后填写结果。
 

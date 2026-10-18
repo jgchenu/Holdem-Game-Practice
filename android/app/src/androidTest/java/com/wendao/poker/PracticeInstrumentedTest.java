@@ -5,6 +5,9 @@ import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.SystemClock;
+import android.view.InputDevice;
+import android.view.MotionEvent;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import java.util.concurrent.CountDownLatch;
@@ -12,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.json.JSONArray;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
@@ -48,6 +52,32 @@ public class PracticeInstrumentedTest {
 
     private void idle() throws Exception {
         until("document.querySelector('#live-table')?.dataset.busy === 'false'");
+    }
+
+    /** Dispatch an actual touchscreen down/up through Android, never DOM click(). */
+    private void tap(String selector) throws Exception {
+        String quoted = org.json.JSONObject.quote(selector);
+        until("!document.querySelector('#app').inert && (()=>{const b=document.querySelector(" + quoted + ");return b && !b.disabled})()");
+        js("window.__nativeTouch=null;if(!window.__nativeTouchTracking){document.addEventListener('click',e=>{window.__nativeTouch={trusted:e.isTrusted,target:e.target.closest('button')?.id}},true);window.__nativeTouchTracking=true}");
+        JSONArray box = new JSONArray(js("(()=>{const r=document.querySelector(" + quoted + ").getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2,innerWidth,innerHeight]})()"));
+        double x = box.getDouble(0), y = box.getDouble(1), width = box.getDouble(2), height = box.getDouble(3);
+        assertTrue("Touch target must already be in the visible viewport", x > 0 && x < width && y > 0 && y < height);
+        int[] origin = new int[2];
+        AtomicReference<Float> scale = new AtomicReference<>();
+        instrumentation.runOnMainSync(() -> {
+            activity.getBridge().getWebView().getLocationOnScreen(origin);
+            scale.set((float) (activity.getBridge().getWebView().getWidth() / width));
+        });
+        float screenX = origin[0] + (float) x * scale.get(), screenY = origin[1] + (float) y * scale.get();
+        long down = SystemClock.uptimeMillis();
+        MotionEvent press = MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, screenX, screenY, 0);
+        press.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        try { instrumentation.sendPointerSync(press); } finally { press.recycle(); }
+        SystemClock.sleep(60);
+        MotionEvent release = MotionEvent.obtain(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, screenX, screenY, 0);
+        release.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        try { instrumentation.sendPointerSync(release); } finally { release.recycle(); }
+        instrumentation.waitForIdleSync();
     }
 
     private void learnBeginnerSteps() throws Exception {
@@ -133,7 +163,13 @@ public class PracticeInstrumentedTest {
         launch();
         try {
             until("document.querySelector('#start') && !document.querySelector('#start').disabled");
-            js("document.querySelector('#start').click()");
+            tap("#learn-start");
+            until("document.querySelector('#tutorial-dialog').open");
+            assertEquals("true", js("window.__nativeTouch.trusted && window.__nativeTouch.target === 'learn-start'"));
+            tap("#tutorial-dialog .close-button");
+            until("!document.querySelector('#tutorial-dialog').open");
+            tap("#start");
+            assertEquals("true", js("window.__nativeTouch.trusted && window.__nativeTouch.target === 'start'"));
             idle();
             until("document.querySelector('#live-table').dataset.actor === '0'");
             assertEquals("true", js("document.querySelector('#call').getBoundingClientRect().bottom <= innerHeight"));
@@ -160,7 +196,8 @@ public class PracticeInstrumentedTest {
             js("document.querySelector('#study-dialog').close()");
             js("document.querySelector('#resume').click()"); idle();
             until("!document.querySelector('#raise').disabled");
-            js("document.querySelector('#raise').click()");
+            tap("#raise");
+            assertEquals("true", js("window.__nativeTouch.trusted && window.__nativeTouch.target === 'raise'"));
             until("document.querySelector('#raise-dialog').open");
             assertEquals("true", js("document.querySelector('#raise-confirm').getBoundingClientRect().bottom <= innerHeight"));
             js("document.querySelector('#raise-dialog').close()");
