@@ -71,6 +71,8 @@ test('新手可看九种牌型示例与比牌说明，小屏滚动保留继续�
     const lastCard = await entry.locator('.trial-card').last().boundingBox();
     expect(lastCard!.x + lastCard!.width).toBeLessThanOrEqual(row!.x + row!.width);
     const cta = await page.locator('#tutorial-next').boundingBox();
+    await expect(page.locator('#tutorial-next')).toBeInViewport({ratio:1});
+    expect(cta!.y).toBeGreaterThanOrEqual(0);
     expect(cta!.y + cta!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
   }
   const pair = guide.locator('[data-hand-category="1"]');
@@ -84,6 +86,8 @@ test('新手可看九种牌型示例与比牌说明，小屏滚动保留继续�
     el.scrollTop += title.getBoundingClientRect().top - el.getBoundingClientRect().top - 10;
   });
   const pairCta = await page.locator('#tutorial-next').boundingBox();
+  await expect(page.locator('#tutorial-next')).toBeInViewport({ratio:1});
+  expect(pairCta!.y).toBeGreaterThanOrEqual(0);
   expect(pairCta!.y + pairCta!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
   await page.screenshot({path:`artifacts/hand-guide-pair-${info.project.name}.png`});
   const straightFlush = guide.locator('[data-hand-category="8"]');
