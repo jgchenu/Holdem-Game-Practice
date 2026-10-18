@@ -136,3 +136,17 @@ Windows 测试采用安装后启动 App、测试进程显式启用本机端口�
 992dd9c 的 [39086263824](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39086263824) 中，Web、Android、macOS、Windows 成功；iOS 首次画面就绪检查和试炼通过，但入席后无手牌，整轮失败。下载报告 `artifacts/ios-992dd9c-run/` 的原生层级显示，测试点击时「入席修炼」仍 Disabled，牌桌显示「正在铺开牌席…」，该次点击未开始牌局。测试先前把 DOM 出现等同于引擎可用。
 
 现等待入席/继续按钮真实存在、启用且可点击，再执行原来的入席和手牌恢复断言；分别记录页面就绪与操作可用耗时和截图。未强制启用按钮，未跳过第一进程，仍保留入席后 20 秒内出现手牌、师父功能与进程恢复核对。启动缓慢仍是未通过的性能项，功能就绪窗口不能代表真机体验。本机修改后的 iOS 2 项通过（`artifacts/ios-actionable-entry-regression.log`、`artifacts/ios-native-1792287718130.xcresult`），云端新一轮待执行。992dd9c 的云端首次启动截图已确认原生「道」字画面保持可见，见 `artifacts/ios-992dd9c-attachments/85747DD9-49B6-458A-8211-8CD9145BD228.png`；这项视觉证明独立于失败的功能测试。
+
+### 本轮：完全新手的第一手带练
+
+原有九课偏向问答，不能代替从零教学。新增独立的 12 步带练，首屏主入口为「从零学德州」，师父旁常驻「新手教学」，修炼阁顶部也能进入。依次解释两张底牌、点数和花色、盲注与底池、3/1/1 张公共牌，再亲手过牌、跟注、加注和弃牌，摊牌时标出程序选择的最强五张。教学固定牌堆与行动使用同一规则引擎，明确不作盈利建议，不影响原练习桌与九课境界。
+
+教学步骤使用独立版本键 `wendao:onboarding:v1` 保存；Web、移动 Preferences 和桌面原生文件白名单均已接入。手机弹窗将操作区固定在底部，内容独立滚动，兼顾 320×568 与安全区；可以上一步、退出后继续，完成后也可重学。实际渲染截图位于 `artifacts/onboarding-check-*.png` 与 `artifacts/onboarding-five-*.png`。
+
+完整浏览器 60 项通过、4 项按项目有意跳过，覆盖 Chromium / WebKit 和 320×568 教学操作区；其中新教学专项 8 项通过。核心单元含真实发牌/投入/比牌的教学检查共 21 项通过；iOS 原生 3 项通过，新增教学进度在进程重启后恢复和按钮安全区检查（`artifacts/onboarding-ios.log`，`artifacts/ios-native-1792300811012.xcresult`）。Android API 36 模拟器仪器测试及独立进程恢复通过（30349 → 30449），核对教学步骤由 Preferences 恢复。生产离线 6 项、Rust 文件测试 4 项及服务端类型检查通过，iOS 模拟器、未签名设备包、Android APK 与 macOS App / DMG 构建成功。日志为 `artifacts/onboarding-full-browser-final.log`、`artifacts/onboarding-unit-final.log`、`artifacts/onboarding-android.log`、`artifacts/onboarding-offline-final.log`、`artifacts/onboarding-desktop-store-final.log` 和 `artifacts/onboarding-*-final.log`。
+
+Mac 已解锁，本轮通过实际原生窗口验证新版教学：原练习桌的 J♦ 10♦ J♥ / 3♥ Q♣、灵石 960 和暂停状态在启动后保留；推进教学到第二步，退出 App 再启动，重新打开仍为第二步；最后回到教学欢迎页。此项为 CUA 实际操作观察，非自动化性能测量。Windows 新增教学推进及进程退出恢复断言，须等待本轮 CI，不能用上轮 3078cd1 的成功结果代替。
+
+首轮完整浏览器执行期间改动了前端与字体，开发服务器热重载导致两项中途返回首屏，记录保留于 `artifacts/onboarding-full-browser.log` 与 `artifacts/onboarding-initial-browser-failures/`。冻结源文件后完整执行 60 项通过，未放宽功能断言。
+
+本轮桌面文件测试曾因并行测试用系统时间生成了相同临时目录名而失败，改为进程内原子序号结合时间、PID，测试夹具目录独立；此修正只涉及测试夹具，不改变产品存档位置和写入逻辑。

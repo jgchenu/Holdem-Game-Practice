@@ -50,6 +50,25 @@ public class PracticeInstrumentedTest {
         until("document.querySelector('#live-table')?.dataset.busy === 'false'");
     }
 
+    private void learnBeginnerSteps() throws Exception {
+        js("document.querySelector('#tutorial-open').click()");
+        until("document.querySelector('#tutorial-next') && !document.querySelector('#tutorial-next').disabled");
+        js("document.querySelector('#tutorial-next').click()");
+        until("document.querySelector('#tutorial-step-title').textContent.includes('两张底牌') && !document.querySelector('#tutorial-next').disabled");
+        js("document.querySelector('#tutorial-hole').click()");
+        until("document.querySelector('#tutorial-step-title').textContent.includes('字和图案') && !document.querySelector('#tutorial-next').disabled");
+        js("document.querySelector('#tutorial-next').click()");
+        until("document.querySelector('#tutorial-step-title').textContent.includes('灵石池') && !document.querySelector('#tutorial-next').disabled");
+        assertEquals("{\"step\":3}", instrumentation.getTargetContext().getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:onboarding:v1", null));
+        js("document.querySelector('#tutorial-dialog').close()");
+    }
+
+    private void verifyBeginnerStep() throws Exception {
+        js("document.querySelector('#tutorial-open').click()");
+        until("document.querySelector('#tutorial-step-title')?.textContent.includes('灵石池')");
+        js("document.querySelector('#tutorial-dialog').close()");
+    }
+
     private void requireEmulator() {
         // This test owns emulator data only; never overwrite a person's practice session on a phone.
         assumeTrue("Isolated native tests require an emulator", Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk") || Build.PRODUCT.contains("sdk"));
@@ -63,6 +82,7 @@ public class PracticeInstrumentedTest {
             .putString("wendao:practice:v1", "null")
             .putString("wendao:preferences:v1", "{\"sound\":false,\"reducedMotion\":true,\"quality\":\"balanced\"}")
             .putString("wendao:learning:v1", "[\"ranks\",\"actions\",\"position\"]")
+            .putString("wendao:onboarding:v1", "{\"step\":0}")
             .putString("wendao:trials:v1", "[]").commit();
         launch();
         try {
@@ -72,6 +92,7 @@ public class PracticeInstrumentedTest {
             js("document.querySelector('#study').click();document.querySelector('[data-trial=free-check]').click();document.querySelector('#trial-call').click()");
             until("document.querySelector('#trial-feedback').classList.contains('passed') && !document.querySelector('#trial-done').disabled");
             js("document.querySelector('#study-dialog').close()");
+            learnBeginnerSteps();
             String snapshot = js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent})");
             assertTrue(context.getSharedPreferences("LifecycleTestExpected", Context.MODE_PRIVATE).edit().putString("snapshot", snapshot).commit());
             assertTrue(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:trials:v1", "").contains("free-check"));
@@ -86,6 +107,7 @@ public class PracticeInstrumentedTest {
         launch();
         try {
             idle(); until("document.querySelector('#resume') && !document.querySelector('#resume').hidden");
+            verifyBeginnerStep();
             assertEquals(expected, js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent})"));
             js("document.querySelector('#study').click()");
             until("document.querySelector('[data-trial=free-check]').textContent.includes('已达成')");
@@ -99,6 +121,7 @@ public class PracticeInstrumentedTest {
             .putString("wendao:practice:v1", "null")
             .putString("wendao:preferences:v1", "{\"sound\":false,\"reducedMotion\":true,\"quality\":\"balanced\"}")
             .putString("wendao:learning:v1", "[\"ranks\",\"actions\",\"position\"]")
+            .putString("wendao:onboarding:v1", "{\"step\":0}")
             .putString("wendao:trials:v1", "[]")
             .commit();
         launch();
@@ -108,6 +131,7 @@ public class PracticeInstrumentedTest {
             idle();
             until("document.querySelector('#live-table').dataset.actor === '0'");
             assertEquals("true", js("document.querySelector('#call').getBoundingClientRect().bottom <= innerHeight"));
+            learnBeginnerSteps();
             String before = js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent})");
             assertNotNull(context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:practice:v1", null));
 
@@ -123,6 +147,7 @@ public class PracticeInstrumentedTest {
             launch();
             idle();
             until("document.querySelector('#resume') && !document.querySelector('#resume').hidden");
+            verifyBeginnerStep();
             assertEquals(before, js("JSON.stringify({label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent})"));
             js("document.querySelector('#study').click()");
             until("document.querySelector('[data-trial=free-check]').textContent.includes('已达成')");

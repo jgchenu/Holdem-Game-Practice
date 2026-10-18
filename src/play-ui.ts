@@ -24,6 +24,7 @@ import {
 } from "./learning";
 import { trials } from "./trials";
 import { openTrialPanel } from "./trial-panel";
+import { openOnboarding, onboardingComplete } from "./onboarding-panel";
 import { guidance } from "./coach";
 import { createMentorPanel } from "./mentor-panel";
 import "./play.css";
@@ -44,9 +45,9 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <div class="live-status"><span id="stage-label">静心 · 入席</span><span id="hand-number">单人练习</span></div>
     <section class="live-table-wrap"><div id="live-table" role="img" aria-label="六人牌桌，尚未发牌"></div><div id="loading" role="status">正在铺开牌席…</div><button id="inspect" class="look-button" disabled aria-label="抬起或放下手牌">观牌</button></section>
     <section class="play-dock" aria-label="牌局操作">
-      <div class="live-mentor"><span class="mentor-emblem" aria-hidden="true">玄</span><div><div class="mentor-heading">青玄师父 <button id="coach-open" class="mentor-badge mentor-consult" aria-label="请教青玄师父">请教师父 ›</button></div><p id="tip" aria-live="polite"></p></div></div>
+      <div class="live-mentor"><span class="mentor-emblem" aria-hidden="true">玄</span><div><div class="mentor-heading">青玄师父 <button id="tutorial-open" class="mentor-badge mentor-consult">新手教学</button><button id="coach-open" class="mentor-badge mentor-consult" aria-label="请教青玄师父">请教师父 ›</button></div><p id="tip" aria-live="polite"></p></div></div>
       <div class="turn-info"><span id="turn-status" role="status">静心入席</span><span>你的灵石 <strong id="wallet">1,000</strong></span></div>
-      <div id="start-panel" class="control-panel"><button id="start" class="primary-button" disabled>入席修炼 <span>→</span></button></div>
+      <div id="start-panel" class="control-panel beginner-entry"><button id="learn-start" class="primary-button">从零学德州 →</button><button id="start" class="primary-button" disabled>入席修炼 <span>→</span></button></div>
       <div id="turn-panel" class="control-panel turn-actions" hidden><button id="fold" class="table-action fold-action">弃牌<small>放下此手</small></button><button id="call" class="table-action call-action">过牌<small>无需投入</small></button><button id="raise" class="table-action raise-action">加注<small>选择金额</small></button></div>
       <div id="wait-panel" class="control-panel" hidden><button id="resume" class="primary-button">继续修炼 →</button><p id="waiting" class="waiting-copy" hidden><span class="thinking-dot"></span>道友正在思考…</p></div>
       <div id="result-panel" class="control-panel result-actions" hidden><button id="review" class="review-button">本手复盘</button><button id="next" class="primary-button">下一手 →</button></div>
@@ -54,6 +55,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     </section>
   </main>
   <aside class="side-note"><span class="vertical-title">落子有声 · 行牌有意</span><div class="note-bottom"><span class="tiny-diamond">◇</span><p>输赢是一时，进退亦是修行。<br/>从看懂一手牌开始。</p><button id="study-desktop">进入修炼阁 →</button></div></aside></div>
+  <dialog id="tutorial-dialog" aria-labelledby="tutorial-title"><div class="dialog-header"><div><p class="eyebrow">YOUR FIRST HAND</p><h2 id="tutorial-title">初入牌途 · 师父带练</h2></div><button class="close-button" aria-label="关闭新手教学">×</button></div><div id="tutorial-body"></div></dialog>
   <dialog id="raise-dialog" class="bottom-sheet" aria-labelledby="raise-title"><form id="raise-form"><div class="dialog-header"><div><p class="eyebrow">CHOOSE YOUR WAGER</p><h2 id="raise-title">落子 · 加注</h2></div><button type="button" class="close-button" aria-label="关闭加注">×</button></div><label class="amount-field" for="raise-amount"><span>本轮总投入</span><div><input id="raise-amount" type="number" inputmode="numeric" step="1" required aria-describedby="raise-detail raise-error"/><span>灵石</span></div></label><input id="raise-range" type="range" step="1" aria-label="调整本轮总投入"/><div class="bet-presets"><button type="button" data-bet="min">最小</button><button type="button" data-bet="half">半池</button><button type="button" data-bet="pot">一池</button><button type="button" data-bet="all">全下</button></div><p id="raise-detail" class="raise-detail"></p><p id="raise-error" class="input-error" role="alert"></p><button id="raise-confirm" class="primary-button sheet-confirm" type="submit">确认加注</button></form></dialog>
   <dialog id="review-dialog" class="bottom-sheet" aria-labelledby="review-title"><div class="dialog-header"><div><p class="eyebrow">LEARN FROM EVERY HAND</p><h2 id="review-title">明心 · 本手复盘</h2></div><button class="close-button" aria-label="关闭复盘">×</button></div><div id="review-body"></div></dialog>
   <dialog id="study-dialog" class="bottom-sheet" aria-labelledby="study-title"><div class="dialog-header"><div><p class="eyebrow">SMALL STEPS, DEEPER WISDOM</p><h2 id="study-title">悟道阁 · 修炼</h2></div><button class="close-button" aria-label="关闭修炼">×</button></div><div id="study-body"></div></dialog>
@@ -131,6 +133,10 @@ function persist() {
   savedOK = saveSession(hand);
 }
 function updateUI() {
+  const trained = onboardingComplete();
+  button("learn-start").textContent = trained ? "复习新手教学" : "从零学德州 →";
+  button("learn-start").className = trained ? "secondary-button" : "primary-button";
+  button("start").className = trained ? "primary-button" : "secondary-button";
   const view = hand ? observe(hand, 0) : null;
   const heroTurn = ready && !busy && !paused && !failed && view?.actor === 0;
   const complete = view?.street === "complete";
@@ -359,6 +365,19 @@ button("about").addEventListener("click", (event) =>
   open("about-dialog", event.currentTarget as HTMLElement),
 );
 
+function beginTutorial() {
+  if (hand && hand.street !== "complete") {
+    paused = true;
+    persist();
+    updateUI();
+  }
+  openOnboarding(get("tutorial-body"), () => get<HTMLDialogElement>("tutorial-dialog").close());
+  open("tutorial-dialog", button("tutorial-open"));
+}
+button("tutorial-open").addEventListener("click", beginTutorial);
+button("learn-start").addEventListener("click", beginTutorial);
+get("tutorial-dialog").addEventListener("close", updateUI);
+
 const mentor = createMentorPanel(get<HTMLDialogElement>("coach-dialog"));
 button("coach-open").addEventListener("click", (event) => {
   if (hand && hand.street !== "complete") {
@@ -506,10 +525,12 @@ function lessonList() {
     return `<section class="learning-stage"><h3 class="section-label">${stage.title}<small>${stage.detail}</small></h3>${cards}${checkpoint}</section>`;
   }).join("");
   get("study-body").innerHTML = `
+    <button type="button" id="study-beginner" class="tutorial-entry-card"><span class="seal">初</span><span><strong>完全不懂？先跟师父学第一手</strong><small>看懂牌面 · 亲手操作 · 再来做课程练习</small></span><span>→</span></button>
     <p class="study-intro">每次练一点，先看懂，再上桌。完成当前境界三课，开启下一境。</p>
     <div class="realm-progress"><span>${learningRealm(learned)}</span><span>${learned.length} / ${lessons.length}</span></div>
     ${sections}<p class="trial-progress">问心试炼 ${completedTrials.length} / ${trials.length}</p>
     <p class="dialog-footnote">境界只表示本设备的课程进度。预设试炼独立于练习桌，不作为实战能力评级。</p>`;
+  get("study-beginner").addEventListener("click", () => { get<HTMLDialogElement>("study-dialog").close(); beginTutorial(); });
   bindTrials();
   get("study-body")
     .querySelectorAll<HTMLButtonElement>("[data-lesson]")

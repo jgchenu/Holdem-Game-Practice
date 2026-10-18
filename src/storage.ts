@@ -5,6 +5,7 @@ const keys = [
   "wendao:practice:v1",
   "wendao:learning:v1",
   "wendao:trials:v1",
+  "wendao:onboarding:v1",
 ];
 const memory = new Map<string, string>();
 export interface PersistenceBackend {

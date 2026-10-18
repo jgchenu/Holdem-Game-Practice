@@ -59,7 +59,7 @@ try {
   assert.notEqual(after, before, 'The restarted app must be a new process');
   instrument('restoreAfterHostProcessDeath', 'restore-process-death');
   const result = { passed: true, environment: 'Android emulator', sdk: command(['shell', 'getprop', 'ro.build.version.sdk']), processBefore: before, processAfter: after,
-    checks: ['real process disappears after force-stop', 'new process starts', 'same hand and wallet', 'same course progress', 'trial seal hydrated from Preferences'],
+    checks: ['real process disappears after force-stop', 'new process starts', 'same hand and wallet', 'same course progress', 'trial seal hydrated from Preferences', 'beginner step hydrated from Preferences'],
     notVerified: ['physical phone', 'low-memory killer', 'hardware audio', 'sustained frame times'] };
   writeFileSync(join(output, 'result.json'), JSON.stringify(result, null, 2));
   console.log('Android process-death recovery passed: ' + before + ' → stopped → ' + after);

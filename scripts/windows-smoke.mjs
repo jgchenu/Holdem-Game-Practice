@@ -261,11 +261,20 @@ try {
   await click("#study");
   await until(() => execute("return document.querySelector('[data-trial=free-check]')?.textContent.includes('已达成')"), "trial seal survives native reload");
   await click("#study-dialog .close-button");
+  await click("#tutorial-open");
+  await click("#tutorial-next");
+  await until(() => execute("return document.querySelector('#tutorial-step-title').textContent.includes('两张底牌') && !document.querySelector('#tutorial-next').disabled"), "beginner hole-card step");
+  await click("#tutorial-hole");
+  await until(() => execute("return document.querySelector('#tutorial-step-title').textContent.includes('字和图案') && !document.querySelector('#tutorial-next').disabled"), "beginner rank step");
+  await click("#tutorial-next");
+  await until(() => execute("return document.querySelector('#tutorial-step-title').textContent.includes('灵石池') && !document.querySelector('#tutorial-next').disabled"), "beginner progress checkpoint");
+  await screenshot("beginner");
+  await click("#tutorial-dialog .close-button");
   await click("#next");
   await idle();
   await until(() => execute("return !document.querySelector('#call').disabled"), "next hand reaches the hero");
   await click("#pause");
-  const coldBefore = await execute("return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent}");
+  const coldBefore = await execute("return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent,beginnerStep:JSON.parse(localStorage.getItem('wendao:onboarding:v1')).step}");
   const previous = appProcess;
   logs += execFileSync("taskkill.exe", ["/PID", String(previous.pid), "/T", "/F"], { encoding: "utf8", timeout: 15_000 });
   await until(() => previous.exitCode !== null || previous.signalCode !== null, "native app process exits", 15_000);
@@ -276,7 +285,7 @@ try {
   await launchNative();
   await idle();
   await until(() => execute("return !document.querySelector('#resume').hidden"), "cold launch restores the paused hand");
-  const coldAfter = await execute("return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent}");
+  const coldAfter = await execute("return {label:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent,progress:document.querySelector('#progress').textContent,beginnerStep:JSON.parse(localStorage.getItem('wendao:onboarding:v1')).step}");
   assert.deepEqual(coldAfter, coldBefore, "The new native process must restore the same hand, wallet and courses");
   assert.notEqual(appProcess.pid, previous.pid, "Cold launch must use a new app process");
   const processRestart = { beforePid: previous.pid, afterPid: appProcess.pid, state: coldAfter };
@@ -285,6 +294,10 @@ try {
   await until(() => execute("return document.querySelector('[data-trial=free-check]')?.textContent.includes('已达成')"), "trial seal survives full native process death");
   await execute("document.querySelector('[data-trial=free-check]').scrollIntoView({block:'center'})");
   await screenshot("process-trial-restored");
+  await click("#study-dialog .close-button");
+  await click("#tutorial-open");
+  await until(() => execute("return document.querySelector('#tutorial-step-title').textContent.includes('灵石池')"), "beginner step restored from native checkpoint");
+  await screenshot("process-beginner-restored");
   writeFileSync(
     join(output, "result.json"),
     JSON.stringify(
@@ -306,6 +319,8 @@ try {
           "native process tree stopped",
           "cold launch restores hand, wallet and courses",
           "cold launch restores trial seal",
+          "beginner guided steps",
+          "beginner progress survives native process death",
         ],
         passed: true,
       },

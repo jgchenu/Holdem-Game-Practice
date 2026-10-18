@@ -10,6 +10,34 @@ final class PracticeUITests: XCTestCase {
         app.images.matching(NSPredicate(format: "label CONTAINS %@", "你的底牌")).firstMatch
     }
 
+    func testNativeBeginnerGuidePersistsWithoutStartingPractice() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")
+        app.launch()
+        XCTAssertTrue(app.buttons["新手教学"].waitForExistence(timeout: 60))
+        app.buttons["新手教学"].tap()
+        if app.buttons["再跟师父学一遍"].exists { app.buttons["再跟师父学一遍"].tap() }
+        for _ in 0..<12 {
+            if !app.buttons["← 上一步"].exists { break }
+            app.buttons["← 上一步"].tap()
+        }
+        button(app, containing: "师父带我学第一手").tap()
+        button(app, containing: "点击你的两张底牌").tap()
+        app.buttons["明白了，继续 →"].tap()
+        XCTAssertTrue(app.staticTexts["桌子中间的灵石池"].waitForExistence(timeout: 10))
+        app.buttons["关闭新手教学"].tap()
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["新手教学"].waitForExistence(timeout: 60))
+        app.buttons["新手教学"].tap()
+        XCTAssertTrue(app.staticTexts["桌子中间的灵石池"].waitForExistence(timeout: 10), "The native Preferences store must restore the beginner step")
+        XCTAssertLessThanOrEqual(app.buttons["明白了，继续 →"].frame.maxY, app.frame.maxY - 16)
+        let evidence = XCTAttachment(screenshot: app.screenshot())
+        evidence.name = "ios-native-beginner-restored"
+        evidence.lifetime = .keepAlways
+        add(evidence)
+    }
+
     func testNativePracticeMentorAndRelaunchPersistence() throws {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")

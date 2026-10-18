@@ -68,3 +68,21 @@ test('试炼离线可操作，完成印记断网重载后保留', async ({ page,
   await expect(page.locator('.trial-progress')).toHaveText('问心试炼 1 / 3');
   await context.setOffline(false);
 });
+
+test('零基础带练可以离线进入，断网刷新后继续上次教学步骤', async ({page,context})=>{
+  await page.goto('/');
+  await expect(page.locator('#start')).toBeEnabled();
+  await page.evaluate(()=>navigator.serviceWorker.ready);
+  await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBeTruthy();
+  await context.setOffline(true);
+  await page.reload();
+  await page.locator('#learn-start').click();
+  await page.locator('#tutorial-next').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('先认识你的两张底牌');
+  await page.reload();
+  await page.locator('#tutorial-open').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('先认识你的两张底牌');
+  await page.locator('#tutorial-hole').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('牌上的字和图案怎么看');
+  await context.setOffline(false);
+});

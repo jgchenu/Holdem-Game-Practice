@@ -8,11 +8,12 @@ use std::{
 };
 use tauri::State;
 
-const KEYS: [&str; 4] = [
+const KEYS: [&str; 5] = [
     "wendao:preferences:v1",
     "wendao:practice:v1",
     "wendao:learning:v1",
     "wendao:trials:v1",
+    "wendao:onboarding:v1",
 ];
 const MAX_VALUE: usize = 512 * 1024;
 const MAX_FILE: u64 = 8 * 1024 * 1024;
@@ -136,17 +137,20 @@ pub async fn set_practice_value(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+    static FIXTURE_ID: AtomicU64 = AtomicU64::new(0);
     struct Fixture(PathBuf);
     impl Fixture {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!(
-                "wendao-store-{}-{}",
+                "wendao-store-{}-{}-{}",
                 std::process::id(),
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
-                    .as_nanos()
+                    .as_nanos(),
+                FIXTURE_ID.fetch_add(1, Ordering::Relaxed)
             ));
             fs::create_dir(&path).unwrap();
             Self(path)
