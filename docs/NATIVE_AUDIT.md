@@ -53,6 +53,12 @@ Windows CI 请求 `WENDAO_SOAK_CYCLES=15`，每轮走实际 65 秒牌局并验�
 
 Android 新增流程首轮在真实 Android 正则运行时抛出 PatternSyntaxException，发生在进入牌局之前，0 轮完成；失败保留于 `artifacts/android-extended-soak-first-attempt/`。已补齐正则中结束花括号的转义，重新执行原生运行检查后才能认定解析器和 15 轮长测通过。Java 编译成功不能代替 Android 实际运行成功。
 
+修正后的 Android **60e0085 原生实跑已完整通过**：15 轮、101 手牌、982,440 ms 实际采样、58,909 回调样本；各轮 P95 16.7–16.8 ms，总最大间隔 50.1 ms，超过 50 ms 共 1 个。API 36 / 4 核 / 4 GB 临时启动参数，viewport 411×866 / DPR 2.625，实际 renderer 为 Android Emulator OpenGL ES Translator (Apple M1 Pro)，精美画质与完整动效。每轮均采到绑定的 App + WebView renderer 两进程，PSS 基线 262,007,808、末轮 298,432,512 字节，逐轮范围 287,997,952–298,911,744 字节；不是无增长或无泄漏结论。边界解析检查、实际音频开启/静音/后台恢复、新音符与结束暂停、全部正常规则循环通过；超过单行大小的最终报告经分片完整重组成功。原始数据 `artifacts/android-extended-soak/{report,summary,observer}.json`，原生导出 `artifacts/android-native-runtime-1792319464690.json`。此前 0 轮失败继续保留。
+
+该轮没有并行本机构建、浏览器测试、iOS 模拟器、归档解压或其他自动帧测试；有静态代码草拟、Git/远程 CI 元数据查询和一次本应用检查点读取。既有桌面验收 App 持续保留，普通系统负载未排除。测试结束已关闭模拟器；不外推手机、实际 GPU 呈现或物理触控延迟。
+
+macOS 新增 `node scripts/prepare-macos-soak.mjs`：构建独立的「问道牌途长测」与 `com.wendao.poker.soak.desktop`，使用 `artifacts/macos-soak-target/` 独立 Cargo 输出和独立存档，构建前后核对既有验收 App 二进制。此命令只准备 App 和诊断工具，不代表长测通过。采样工具按同一用户的两个内核 coalition 标识识别 App 和 WebKit / 其他助手，使用 `footprint` 的字节字段与 OS RSS，并核对采样前后成员；要求包含实际 WebContent、无系统采集错误和权限警告。诊断 ABI 来自 [Apple OSS proc_info_private.h](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/proc_info_private.h)，仅供本机测试，未链接到游戏。当前宿主的只读查询已验证既有 App / GPU / Network / WebContent 同属一组、无关 WebKit 属另一组，四进程 footprint 查询无错误；新的独立客户端和 15 轮运行仍待实际验证。相关单元共 30 项通过，不能把工具实现或一次归属查询写成持续性能验收。
+
 iOS 原生 15 轮长测可用专用命名设备运行：`IOS_TEST_DEVICE=<Wendao Soak 开头的专用设备 UUID> node scripts/ios-runtime-soak.mjs`。它只接受单一已启动测试设备，先确认新启动环境中没有 WebKit 进程，再按本设备的 `launchd_sim` 后代采集 App 与 WebKit RSS；不把桌面 Safari/WebKit 或其他模拟器算入。实际结果在 `artifacts/ios-extended-soak/report.json`，仅当 15 轮原生断言全部完成且无采集错误才记通过。RSS 可重复计算共享页，不能称作 iPhone 实际 RAM 或 GPU 显存。长测期间不要并行本机构建或浏览器测试。
 
 内存字段采用 [.NET PrivateMemorySize64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.privatememorysize64) 和 [WorkingSet64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.workingset64) 的字节值；工作集包含共享页面，所以跨进程求和可能重复计算，不能称为独占物理内存或 GPU 显存。进程亲属关系依据 [Win32_Process](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process)。连续采样完成本身不证明没有泄漏，仍需检查预热后的变化和异常；不借此承诺手机帧率。

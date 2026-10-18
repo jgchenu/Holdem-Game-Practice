@@ -19,7 +19,11 @@ import { parseAndroidAudit } from "./native-audit-log.mjs";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const target = process.argv[2];
 const env = { ...process.env };
-const audit = ["ios-audit", "android-audit", "desktop-audit"].includes(target);
+const audit = ["ios-audit", "android-audit", "desktop-audit", "desktop-soak"].includes(target);
+if (target === "desktop-soak") {
+  if (process.platform !== "darwin") throw new Error("独立 macOS 长测构建需要这台 Mac。");
+  env.CARGO_TARGET_DIR = join(root, "artifacts", "macos-soak-target");
+}
 const liveAudit = audit && env.WENDAO_LIVE_AI === "1";
 const fixtureAudit = target === "desktop-audit" && env.WENDAO_COACH_FIXTURE === "1";
 const extendedIOSAudit = target === "ios-audit" && env.WENDAO_SOAK_CYCLES === "15";
@@ -98,10 +102,11 @@ if (
     "desktop-debug",
     "desktop-test",
     "desktop-audit",
+    "desktop-soak",
   ].includes(target)
 ) {
   console.error(
-    "Usage: node scripts/platform.mjs sync|android|android-test|android-audit|ios-sim|ios-test|ios-audit|ios-device|ios-signed|desktop|desktop-debug|desktop-test|desktop-audit",
+    "Usage: node scripts/platform.mjs sync|android|android-test|android-audit|ios-sim|ios-test|ios-audit|ios-device|ios-signed|desktop|desktop-debug|desktop-test|desktop-audit|desktop-soak",
   );
   process.exit(1);
 }
@@ -113,15 +118,16 @@ if (target.startsWith("desktop")) {
   }
   // A file avoids cmd.exe stripping the JSON quotes from a .cmd invocation.
   // Keep the argument relative and space-free even when the checkout path has spaces.
-  const auditConfig = join("artifacts", "desktop-audit-config.json");
-  if (audit) writeFileSync(join(root, auditConfig), JSON.stringify({ productName: "问道牌途验收", identifier: "com.wendao.poker.audit.desktop" }));
+  const soak = target === "desktop-soak";
+  const auditConfig = join("artifacts", soak ? "desktop-soak-config.json" : "desktop-audit-config.json");
+  if (audit) writeFileSync(join(root, auditConfig), JSON.stringify({ productName: soak ? "问道牌途长测" : "问道牌途验收", identifier: soak ? "com.wendao.poker.soak.desktop" : "com.wendao.poker.audit.desktop" }));
   run(npx, [
     "tauri",
     "build",
     ...(audit ? ["--config", auditConfig] : []),
     ...(target === "desktop-debug"
       ? ["--debug", "--no-bundle"]
-      : ["--bundles", process.platform === "win32" ? "nsis" : "app,dmg"]),
+      : ["--bundles", soak ? "app" : process.platform === "win32" ? "nsis" : "app,dmg"]),
   ]);
   process.exit(0);
 }
