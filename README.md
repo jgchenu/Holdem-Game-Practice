@@ -90,3 +90,5 @@ src/
 `npm run test:ios:ordinary` 另建一台全新模拟器，用普通无诊断构建首次打开教学；通过后从该模拟器的已安装 App 生成 `artifacts/packages/wendao-ios-simulator.zip`，随后清理设备。此流程不替代三套诊断冷启动。`npm run test:macos:ui` 只允许在一次性 GitHub Actions 主机上执行，使用独立副本做原生首次教学检查；本机可用 `npm run test:macos:ui -- --build-only` 仅编译测试工程，不启动现有应用。云端 Mac UI 可用性须实跑确认，不等于已完成长测。
 
 Mac 独立长测使用 `node scripts/macos-runtime-soak.mjs`；先用 `node scripts/prepare-macos-soak.mjs` 生成专用 App（重建前仅关闭“问道牌途长测”）。`--build-only` 只编译 XCTest 驱动，不启动 App。实际运行需要 Mac 解锁并完成系统开发工具认证；驱动仅允许 `com.wendao.poker.soak.desktop`，原有验收 App 不作为操作目标。每轮冻结完整摘要后，宿主采集进程组内存并确认，才启动下一轮；结果保留在 `artifacts/macos-xctest-soak/<runID>/`。
+
+定位 Mac 原生问题时，可用 `gh workflow run verify.yml --ref <分支名> -f platform=macos` 手动执行 Mac 专项。此范围只用于诊断；PR、推送到 main 和默认手动运行仍执行全部平台，专项通过不能代替五平台通过。

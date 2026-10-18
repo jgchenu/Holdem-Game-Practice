@@ -206,3 +206,5 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 新增独立 `scripts/macos-runtime-soak.mjs`，复用现有 XCTest 工程及内核进程归属采集器。Node 和 Swift 均核对专用 App 路径/标识；记录并复核 App 二进制、实际游戏输入差异、受保护审计 App 的哈希和 PID。使用随机 runID 的文件确认协议，冻结每轮 MEASURE 后才采样系统内存，采样成功后才允许下一轮；完整 15 轮之后还要检查实际卡牌像素和进程重启恢复。只选长测方法，普通 CI 仍单独选择教学方法。完整 AUDIT 长标签可能截断，未冒称导出了该完整原始数据。
 
 本机单元 38 项通过，含不完整样本、音频未暂停、无新增音频与缺失/无效回调统计的拒绝检查（`artifacts/macos-native-soak-final-unit.log`）；独立驱动 build-only 两次编译通过。实际启动尝试 `2c47bc5f-e105-40cc-b345-c6a899950d25` 在 XCTest 初始化时失败，日志为“认证已取消。System authentication is running.”，随后系统状态实际确认 IOConsoleLocked=true。没有进入测试、没有 baseline 或接受轮次，report.passed=false；受保护 App PID 40880 和二进制哈希前后相同。已请求用户解锁并完成开发工具认证，不自动修改系统安全权限。新驱动运行协议、15 轮采样、最终像素和重启恢复仍待实际验证。
+
+手动工作流新增 `platform=macos` 诊断范围，只启动 Mac 构建和原生测试，便于在本机系统认证未完成时继续核查云端截图；PR/main 仍始终执行原有全部平台，默认手动运行也为全部。当前独立分支的诊断不替代 PR #1 的五平台合并门禁，也不取消正在运行的 iOS 套件。

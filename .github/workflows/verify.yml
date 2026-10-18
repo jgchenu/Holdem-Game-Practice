@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Manual diagnosis scope; pull requests and main always verify all platforms
+        type: choice
+        default: all
+        options: [all, macos]
 
 permissions:
   contents: read
@@ -15,6 +21,7 @@ concurrency:
 
 jobs:
   web:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform != 'macos'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -42,6 +49,7 @@ jobs:
           retention-days: 14
 
   android:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform != 'macos'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -63,6 +71,7 @@ jobs:
           retention-days: 14
 
   ios:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform != 'macos'
     runs-on: macos-26
     # Four fresh devices plus packaging; per-action readiness stays at 60 s.
     timeout-minutes: 60
@@ -98,7 +107,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-26, windows-latest]
+        os: ${{ inputs.platform == 'macos' && fromJSON('["macos-26"]') || fromJSON('["macos-26","windows-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
