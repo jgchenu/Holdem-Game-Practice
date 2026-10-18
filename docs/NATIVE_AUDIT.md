@@ -160,3 +160,11 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 采集改动后的本机原生回归：`artifacts/ios-collector-native.log` 中 3 项功能通过、1 项主动跳过；`artifacts/ios-native-input-1792330348372.json` 实际查询耗时 317 ms，一次成功，取得本轮 6 条记录并排除 12 条旧记录。原生查询本轮没有触发超时重采；不能用替身回归代称真实重采已测。随后普通模拟器构建通过（`artifacts/ios-collector-ordinary-build.log`），仅关闭本轮使用的自建 Hover Gate 模拟器。
 
 同轮 Windows 最终通过，记录 `artifacts/windows-0912720-run/summary.json` 及 `artifacts/windows-runtime/` 原始 JSON：15 个窗口 / 97 个完成态观测 / 982,850 ms 实际采样 / 62,884 次回调；各轮 P95 15.7 ms，最大 31.3 ms，超过 50 ms 间隔为 0。每轮 8 个进程的系统计数完整；组 Private Bytes 从 378,613,760 增至 464,764,928，Working Set 从 582,520,832 变为 408,784,896。不据此判断无泄漏。本轮没有任何重采样本。采用 Microsoft Basic Render Driver / D3D11 软件环境，数据不代表 GPU 呈现或手机性能。普通安装版原生检查及真实 HTTP 兼容替身检查通过，未将替身称为实际 DeepSeek。普通 NSIS 已补入 candidate-0912720，七份产物及校验和齐全；iOS 门禁和 Mac 原生剩余项仍使 releaseReady=false。
+
+### e167d9b：CoreSimulator 首次发现超时
+
+[39132629224](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39132629224) 的 iOS 在执行 `simctl list devices available --json` 时超过 30 秒，尚未创建验收设备或启动游戏；不是首次教学用例失败。日志为 `artifacts/ios-e167d9b-job.log`。旧的准备步骤在报告初始化之前，因而没有生成冷启动 JSON。
+
+只读查询处理现在由 `readIosSimulator` 统一负责：仅允许列出可用设备或查询本 App 数据容器；30 秒期限，仅 ETIMEDOUT 可重读一次，两次状态和耗时全部保留。创建、启动、关闭、删除设备与其他 App 查询均不能进入重采路径。冷启动报告在发现设备之前初始化，准备阶段也进入同一失败保存流程。新增清单查询与禁止修改操作的回归后，本机单元 37 项通过；本机实际三套冷启动复验已全部通过，云端仍待新提交验证。
+
+统一查询处理后的三套本机实测：`artifacts/ios-discovery-cold-entry.json`、`artifacts/ios-discovery-three-cold.log`。9 项功能通过、3 项按配置跳过；每套分别取得本轮 6 条原生记录，三台自建设备的关闭与删除均成功。设备发现实际一次读取成功（121 ms），本轮原生读取未发生超时重采；超时恢复的证据仍限于查询替身，不能称为已修复所有云端环境故障。复验后的普通模拟器已重新构建（`artifacts/ios-discovery-ordinary-build.log`），可执行文件及动态库扫描均不含测试记录器（`artifacts/ios-discovery-ordinary-scan.json`）。冷启动报告也保留实际 checkout SHA 与 tree，便于核对 PR 合并提交。

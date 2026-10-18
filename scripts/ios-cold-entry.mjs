@@ -5,23 +5,18 @@ import {randomUUID} from 'node:crypto';
 import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
+import {readIosSimulator} from './ios-native-input.mjs';
 
 assert.equal(process.platform,'darwin','iOS cold-entry verification requires macOS and Xcode');
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const output=join(root,'artifacts');mkdirSync(output,{recursive:true});
 const runToken=randomUUID();
 const xcrun=args=>execFileSync('xcrun',args,{cwd:root,encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024}).trim();
-const listing=JSON.parse(xcrun(['simctl','list','devices','available','--json']));
-const candidates=Object.entries(listing.devices).flatMap(([runtime,devices])=>devices.map(device=>({...device,runtime})))
-  .filter(device=>device.runtime.includes('.iOS-')&&device.deviceTypeIdentifier?.includes('iPhone'));
-const template=candidates.find(device=>device.udid===process.env.IOS_TEST_DEVICE)||candidates.find(device=>device.deviceTypeIdentifier.endsWith('iPhone-17-Pro'))||candidates[0];
-assert.ok(template,'An available iPhone runtime and device type are required');
 const report={passed:false,phase:'preparing',requestedSuites:3,completedSuites:0,runToken,
   sourceRevision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
   sourceTree:execFileSync('git',['rev-parse','HEAD^{tree}'],{cwd:root,encoding:'utf8'}).trim(),
   worktreeStatus:execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).trim(),
-  template:{runtime:template.runtime,deviceType:template.deviceTypeIdentifier},
-  existingBootedDevices:candidates.filter(d=>d.state==='Booted').map(d=>d.udid),suites:[],
+  template:null,existingBootedDevices:[],suites:[],
   scope:'Three independently created simulators, each with its own first app process, first teaching tap, guide scroll, native persistence and trial suite. Stop on any failure; no first-tap or suite retry. Only devices created by this invocation are shut down and deleted.'};
 const save=()=>writeFileSync(join(output,'ios-cold-entry.json'),JSON.stringify(report,null,2)+'\n');save();
 const artifacts=()=>readdirSync(output).filter(name=>/^ios-native-(?:\d+\.xcresult|input-\d+\.json)$/.test(name));
@@ -29,6 +24,17 @@ let child,cancelled=false;
 const stop=()=>{cancelled=true;if(child?.pid)try{process.kill(-child.pid,'SIGTERM');}catch{}};
 process.once('SIGINT',stop);process.once('SIGTERM',stop);
 try{
+  const discovery=readIosSimulator(['list','devices','available','--json']);
+  report.discovery={attempts:discovery.attempts};save();
+  if(discovery.error||discovery.status!==0)
+    throw new Error(`Simulator discovery failed: ${discovery.error?.message||discovery.stderr||discovery.status}`);
+  const listing=JSON.parse(discovery.stdout);
+  const candidates=Object.entries(listing.devices).flatMap(([runtime,devices])=>devices.map(device=>({...device,runtime})))
+    .filter(device=>device.runtime.includes('.iOS-')&&device.deviceTypeIdentifier?.includes('iPhone'));
+  const template=candidates.find(device=>device.udid===process.env.IOS_TEST_DEVICE)||candidates.find(device=>device.deviceTypeIdentifier.endsWith('iPhone-17-Pro'))||candidates[0];
+  assert.ok(template,'An available iPhone runtime and device type are required');
+  report.template={runtime:template.runtime,deviceType:template.deviceTypeIdentifier};
+  report.existingBootedDevices=candidates.filter(d=>d.state==='Booted').map(d=>d.udid);save();
   for(let index=1;index<=3;index++){
     assert.equal(cancelled,false,'Cold-entry verification was interrupted');
     const name=`Wendao Cold Entry ${runToken.slice(0,8)} ${index}`;

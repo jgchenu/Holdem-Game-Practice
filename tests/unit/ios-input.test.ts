@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {collectIosNativeInput} from '../../scripts/ios-native-input.mjs';
+import {collectIosNativeInput, readIosSimulator} from '../../scripts/ios-native-input.mjs';
 
 const device = '574F619C-F289-424D-9CAC-1CF69BF5F746';
 const timedOut = () => ({status: null, error: Object.assign(new Error('simctl timed out'), {code: 'ETIMEDOUT'})});
@@ -48,4 +48,23 @@ test('iOS 非超时错误不重试，缺失本轮 observer 标记也不能通过
   assert.equal(stale.captureSucceeded, false);
   assert.deepEqual(stale.entries, []);
   assert.match(stale.error, /No observer/);
+});
+
+test('模拟器冷机清单查询可在超时后重读一次，保留两次结果', () => {
+  let calls = 0;
+  const result = readIosSimulator(['list', 'devices', 'available', '--json'], (command: string, args: string[]) => {
+    assert.equal(command, 'xcrun');
+    assert.deepEqual(args, ['simctl', 'list', 'devices', 'available', '--json']);
+    return ++calls === 1 ? timedOut() : {status: 0, stdout: '{"devices":{}}'};
+  });
+  assert.equal(calls, 2);
+  assert.equal(result.status, 0);
+  assert.equal(result.attempts[0].code, 'ETIMEDOUT');
+  assert.equal(result.attempts[1].complete, true);
+});
+
+test('模拟器重采禁止用于创建、启动、关闭或删除设备及其他 App', () => {
+  for (const args of [['create', 'name'], ['boot', device], ['shutdown', device], ['delete', device], ['get_app_container', device, 'another.app', 'data']]) {
+    assert.throws(() => readIosSimulator(args, () => { throw Error('Must not execute a mutation'); }), /Only simulator inventory/);
+  }
 });

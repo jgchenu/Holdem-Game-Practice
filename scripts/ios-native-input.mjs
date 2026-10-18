@@ -3,16 +3,18 @@ import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
 
-/** Read evidence after XCTest; never launch the app or inject/retry input. */
-export function collectIosNativeInput(device, runStartedAtUnixMs, query = spawnSync, read = readFileSync) {
-  assert.match(device, /^[0-9a-f-]{36}$/i);
-  assert.ok(Number.isSafeInteger(runStartedAtUnixMs) && runStartedAtUnixMs > 0);
+/** Bounded read recovery also covers CoreSimulator's first inventory request. */
+export function readIosSimulator(args, query = spawnSync) {
+  const inventory = args.length === 4 && args.join(' ') === 'list devices available --json';
+  const containerRead = args.length === 4 && args[0] === 'get_app_container'
+    && /^[0-9a-f-]{36}$/i.test(args[1]) && args[2] === 'com.wendao.poker' && args[3] === 'data';
+  assert.ok(inventory || containerRead, 'Only simulator inventory and our app container may use read recovery');
   const attempts = [];
   let container;
   for (let attempt = 1; attempt <= 2; attempt++) {
     const started = Date.now();
-    container = query('xcrun', ['simctl', 'get_app_container', device, 'com.wendao.poker', 'data'], {
-      encoding: 'utf8', timeout: 30_000, maxBuffer: 1024 * 1024,
+    container = query('xcrun', ['simctl', ...args], {
+      encoding: 'utf8', timeout: 30_000, maxBuffer: 8 * 1024 * 1024,
     });
     const complete = container.status === 0 && !container.error;
     attempts.push({complete, status: container.status, durationMs: Date.now() - started,
@@ -21,6 +23,14 @@ export function collectIosNativeInput(device, runStartedAtUnixMs, query = spawnS
     // Only repeat this read-only query; a fresh path must come from the same
     // simulator and app. Keep the failed attempt in the exported report.
   }
+  return {...container, attempts};
+}
+
+/** Read evidence after XCTest; never launch the app or inject/retry input. */
+export function collectIosNativeInput(device, runStartedAtUnixMs, query = spawnSync, read = readFileSync) {
+  assert.match(device, /^[0-9a-f-]{36}$/i);
+  assert.ok(Number.isSafeInteger(runStartedAtUnixMs) && runStartedAtUnixMs > 0);
+  const container = readIosSimulator(['get_app_container', device, 'com.wendao.poker', 'data'], query);
   let entries = null, error, rawLog, rawRecordCount = 0;
   try {
     if (container.status !== 0 || container.error)
@@ -35,7 +45,7 @@ export function collectIosNativeInput(device, runStartedAtUnixMs, query = spawnS
   const observerInstalled = Array.isArray(entries) && entries.some(record => record.event === 'observer-ready');
   if (!observerInstalled && !error) error = 'No observer installation marker belongs to this test run';
   return {device, runStartedAtUnixMs, captureSucceeded: observerInstalled, observerInstalled,
-    status: container.status, attempts, error, rawRecordCount,
+    status: container.status, attempts: container.attempts, error, rawRecordCount,
     excludedOlderRecords: entries === null ? null : rawRecordCount - entries.length,
     entries, rawLog: entries === null ? rawLog : undefined,
     scope: "Existing outer UIScrollView pan recognizer and test-build installation markers only, from this test app's known cache file and limited to this run. Only an ETIMEDOUT container query is retried once; XCTest and first input are never retried. No recognizer or cancellation behavior is changed; absence of a pan event does not identify another recognizer."};
