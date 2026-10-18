@@ -8,6 +8,7 @@ const appRoot = document.querySelector<HTMLDivElement>("#app")!;
 // transition finish. Expose controls only once they can actually receive input.
 appRoot.inert = true;
 let practiceReady: Promise<void> | undefined;
+let disposePractice: (() => void) | undefined;
 let launchDismissed = false;
 const phase = (value: string) => { appRoot.dataset.bootPhase = value; };
 try {
@@ -27,7 +28,9 @@ try {
   if (new URLSearchParams(location.search).get("mode") === "demo") {
     await import("./demo-ui");
   } else {
-    practiceReady = (await import("./play-ui")).practiceReady;
+    const practice = await import("./play-ui");
+    practiceReady = practice.practiceReady;
+    disposePractice = practice.disposePractice;
   }
   // Let the WebView become visible before waiting for Phaser's first scene.
   // Occluded native WebViews can postpone rendering; input remains guarded.
@@ -38,6 +41,7 @@ try {
   await practiceReady;
   phase('ready');
 } catch (error) {
+  disposePractice?.();
   phase('failed');
   console.error("Practice startup failed", error);
   document.querySelector("#app")!.innerHTML =
@@ -49,5 +53,6 @@ try {
   // Keep native artwork visible through the first WebView navigation. Release
   // it after either the game UI or the recoverable error screen is mounted.
   try { if (!launchDismissed) await dismissLaunchScreen(); }
+  catch (error) { console.error('Native recovery screen handover failed', error); }
   finally { appRoot.inert = false; }
 }

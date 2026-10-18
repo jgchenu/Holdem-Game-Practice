@@ -13,7 +13,9 @@ final class PracticeUITests: XCTestCase {
     private func captureBootState(_ app: XCUIApplication, name: String) {
         let state = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "BOOTSTATE ")).firstMatch
         if state.exists {
-            let record = XCTAttachment(data: Data(state.label.utf8), uniformTypeIdentifier: "public.plain-text")
+            let label = state.label
+            print("Native startup diagnostic: \(label)")
+            let record = XCTAttachment(data: Data(label.utf8), uniformTypeIdentifier: "public.plain-text")
             record.name = name + "-state"; record.lifetime = .keepAlways; add(record)
         }
     }

@@ -90,6 +90,12 @@ let completedTrials = loadTrials();
 let resumeActionReadyAt = 0;
 let finishPreparing: () => void;
 let failPreparing: (error: unknown) => void;
+let stopped = false;
+const removeGlobalListeners: (() => void)[] = [];
+function listen(target: EventTarget, type: string, handler: EventListener) {
+  target.addEventListener(type, handler);
+  removeGlobalListeners.push(() => target.removeEventListener(type, handler));
+}
 // Module import binds the controls, but Phaser prepares its renderer asynchronously.
 export const practiceReady = new Promise<void>((resolve, reject) => { finishPreparing = resolve; failPreparing = reject; });
 const scene = new LiveScene(prefs, {
@@ -98,6 +104,7 @@ const scene = new LiveScene(prefs, {
     void initialize().catch(failPreparing);
   },
   metrics: (fps, p95) => {
+    if (stopped) return;
     get("fps").textContent =
       `${Math.round(fps)} FPS · P95 ${p95.toFixed(1)} ms`;
   },
@@ -118,9 +125,21 @@ const game = new Phaser.Game({
 });
 // Dispose the failed renderer as well as showing the recovery screen. Scene
 // destruction also releases its audio/lifecycle listeners before a retry.
-void practiceReady.catch(() => { game.destroy(true); });
+void practiceReady.catch(() => { disposePractice(); });
+
+export function disposePractice() {
+  if (stopped) return;
+  stopped = true;
+  ready = false;
+  busy = true;
+  paused = true;
+  removeGlobalListeners.splice(0).forEach(remove => remove());
+  scene.feedback.dispose();
+  game.destroy(true);
+}
 
 async function initialize() {
+  if (stopped) return;
   ready = true;
   get("loading").remove();
   if (hand) {
@@ -130,6 +149,7 @@ async function initialize() {
       report(error);
     }
   }
+  if (stopped) return;
   busy = false;
   updateUI();
   finishPreparing();
@@ -143,6 +163,7 @@ function persist() {
   savedOK = saveSession(hand);
 }
 function updateUI() {
+  if (stopped) return;
   const trained = onboardingComplete();
   button("learn-start").textContent = trained ? "复习新手教学" : "从零学德州 →";
   button("learn-start").className = trained ? "secondary-button" : "primary-button";
@@ -682,30 +703,30 @@ get<HTMLSelectElement>("quality").addEventListener("change", (event) => {
 });
 syncPreferences();
 updateUI();
-document.addEventListener("visibilitychange", () => {
+listen(document, "visibilitychange", () => {
   if (document.hidden && hand && hand.street !== "complete") {
     paused = true;
     persist();
     updateUI();
   }
 });
-window.addEventListener("pagehide", persist);
-window.addEventListener("wendao:suspend", () => {
+listen(window, "pagehide", persist);
+listen(window, "wendao:suspend", () => {
   if (hand && hand.street !== "complete") {
     paused = true;
     persist();
     updateUI();
   }
 });
-window.addEventListener("wendao:storage-error", () => {
+listen(window, "wendao:storage-error", () => {
   savedOK = false;
   updateUI();
 });
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
     mentor.dispose();
-    game.destroy(true);
+    disposePractice();
   });
 
-window.addEventListener("online", updateUI);
-window.addEventListener("offline", updateUI);
+listen(window, "online", updateUI);
+listen(window, "offline", updateUI);

@@ -1,4 +1,5 @@
 import { flushStorage, writeStorage } from './storage';
+import { setDiagnosticText } from './diagnostic-text';
 
 /** Opt-in native audit builds only. Observes actual browser resources, never substitutes them. */
 export async function initializeNativeAudit() {
@@ -56,7 +57,7 @@ export async function initializeNativeAudit() {
       maxMs: values.length ? Math.round(Math.max(...values)*100)/100 : null,
       busyP95Ms: percentile(busy,.95), gapsOver50Ms: values.filter(v=>v>50).length,
       completedHands: hands.size, audioStates: contexts.map(c=>c.state), starts, stops, hidden, suspends,
-      audioEvents, quality: 'fine', reducedMotion: false,
+      audioEvents: audioEvents.map(event => ({ ...event })), quality: 'fine', reducedMotion: false,
       renderEnvironment: renderEnvironment(),
     };
   }
@@ -74,8 +75,8 @@ export async function initializeNativeAudit() {
   const render = () => {
     if (panel.hidden) return;
     const r = frozen ?? report();
-    output.textContent = 'AUDIT ' + JSON.stringify(r);
-    summary.textContent = 'MEASURE ' + JSON.stringify({ elapsedMs:r.elapsedMs,frames:r.frames,busyFrames:r.busyFrames,p50Ms:r.p50Ms,p95Ms:r.p95Ms,p99Ms:r.p99Ms,maxMs:r.maxMs,busyP95Ms:r.busyP95Ms,gapsOver50Ms:r.gapsOver50Ms,completedHands:r.completedHands,audioStates:r.audioStates,starts:r.starts,stops:r.stops,hidden:r.hidden,suspends:r.suspends,quality:r.quality,reducedMotion:r.reducedMotion,renderer:r.renderEnvironment.renderer });
+    setDiagnosticText(output, 'AUDIT ' + JSON.stringify(r));
+    setDiagnosticText(summary, 'MEASURE ' + JSON.stringify({ elapsedMs:r.elapsedMs,frames:r.frames,busyFrames:r.busyFrames,p50Ms:r.p50Ms,p95Ms:r.p95Ms,p99Ms:r.p99Ms,maxMs:r.maxMs,busyP95Ms:r.busyP95Ms,gapsOver50Ms:r.gapsOver50Ms,completedHands:r.completedHands,audioStates:r.audioStates,starts:r.starts,stops:r.stops,hidden:r.hidden,suspends:r.suspends,quality:r.quality,reducedMotion:r.reducedMotion,renderer:r.renderEnvironment.renderer }));
   };
   overlay.querySelector('#audit-open')!.addEventListener('click', () => { panel.hidden = false; render(); });
   overlay.querySelector('#audit-hide')!.addEventListener('click', () => { panel.hidden = true; });
