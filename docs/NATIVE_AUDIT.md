@@ -49,6 +49,10 @@ Windows CI 请求 `WENDAO_SOAK_CYCLES=15`，每轮走实际 65 秒牌局并验�
 
 该次原始触摸记录现已下载：`artifacts/ios-11d0912-attachments/09DFBAED-4F63-457C-91F8-200A053671C7.txt`。按下准确落在 `learn-start`，约 110 ms 后发生 pointercancel / touchcancel，没有 up / end / click；当时 ready、inert=false、focused=true、无脚本错误。之后诊断按钮能收到完整点击。这确认了该次手势被取消，但不能单独认定是哪一个原生识别器。参照 [Pointer Events 的触摸行为定义](https://www.w3.org/TR/pointerevents/#details-of-touch-action-values) 和 [Apple 滚动取消说明](https://developer.apple.com/documentation/uikit/uiscrollview/cancancelcontenttouches)，固定首屏入口与常驻教学按钮现在单独设为 `touch-action:none`，避免从这些控件开始的手势被当作视口拖动；仍使用标准 click，不在按下时提前执行。教学内容独立滚动区不改动。修改后教学/启动浏览器 28 项通过，含 320×568 和移动 WebKit；新装 iOS 本机首次教学、滚动、进程恢复和试炼 3 项通过，报告 `artifacts/ios-native-1792316695119.xcresult`、`artifacts/ios-fixed-entry-gesture.log`。这仍是待云端复验的候选修正，不能把本机通过说成根因已确定。此前 15 轮长测与 a001301 候选包不含这一输入策略改动。
 
+4f9ea23 云端 iOS 仍失败，这次在首次点击前的截图诊断请求超时，并未验证到入口手势；另外两个功能用例通过。日志 `artifacts/ios-4f9ea23-job.log`、原始报告 `artifacts/ios-4f9ea23-run/` 已下载保留。现将启动辅助诊断改成仅记录 BOOTSTATE 和输入事件文字，保留原生窗口/真实就绪/第一次点击断言，实际图鉴截图仍在成功交互后获取。修改后全新本机 iOS 三项通过，报告 `artifacts/ios-native-1792318138357.xcresult`；下一次云端结果仍待确认，不把诊断超时等同于产品点击失败，也不宣称手势修正已通过云端。
+
+Android 新增流程首轮在真实 Android 正则运行时抛出 PatternSyntaxException，发生在进入牌局之前，0 轮完成；失败保留于 `artifacts/android-extended-soak-first-attempt/`。已补齐正则中结束花括号的转义，重新执行原生运行检查后才能认定解析器和 15 轮长测通过。Java 编译成功不能代替 Android 实际运行成功。
+
 iOS 原生 15 轮长测可用专用命名设备运行：`IOS_TEST_DEVICE=<Wendao Soak 开头的专用设备 UUID> node scripts/ios-runtime-soak.mjs`。它只接受单一已启动测试设备，先确认新启动环境中没有 WebKit 进程，再按本设备的 `launchd_sim` 后代采集 App 与 WebKit RSS；不把桌面 Safari/WebKit 或其他模拟器算入。实际结果在 `artifacts/ios-extended-soak/report.json`，仅当 15 轮原生断言全部完成且无采集错误才记通过。RSS 可重复计算共享页，不能称作 iPhone 实际 RAM 或 GPU 显存。长测期间不要并行本机构建或浏览器测试。
 
 内存字段采用 [.NET PrivateMemorySize64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.privatememorysize64) 和 [WorkingSet64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.workingset64) 的字节值；工作集包含共享页面，所以跨进程求和可能重复计算，不能称为独占物理内存或 GPU 显存。进程亲属关系依据 [Win32_Process](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process)。连续采样完成本身不证明没有泄漏，仍需检查预热后的变化和异常；不借此承诺手机帧率。

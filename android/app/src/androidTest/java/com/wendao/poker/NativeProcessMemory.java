@@ -34,14 +34,14 @@ final class NativeProcessMemory {
             if (e.pid == rootPid && e.name.equals(packageName)) root = e;
         }
         if (root == null) throw new IllegalStateException("Missing actual app root in ActivityManager");
-        Pattern component = Pattern.compile(Pattern.quote(packageName) + "/org\\.chromium\\.content\\.app\\.SandboxedProcessService\\d+:\\d+(?=:@|\\s|})");
+        Pattern component = Pattern.compile(Pattern.quote(packageName) + "/org\\.chromium\\.content\\.app\\.SandboxedProcessService\\d+:\\d+(?=:@|\\s|\\})");
         Set<String> bound = new HashSet<>(); Matcher connections = component.matcher(root.body);
         while (connections.find()) bound.add(connections.group());
         if (bound.isEmpty()) throw new IllegalStateException("App has no bound WebView sandbox service");
         JSONArray selected = new JSONArray().put(new JSONObject().put("pid", root.pid).put("uid", root.uid).put("name", root.name).put("role", "app"));
         for (Entry e : entries) {
             if (!e.name.contains(":sandboxed_process")) continue;
-            Matcher packages = Pattern.compile("(?m)^    packageList=\\{([^}]*)}").matcher(e.body);
+            Matcher packages = Pattern.compile("(?m)^    packageList=\\{([^}]*)\\}").matcher(e.body);
             boolean owns = false;
             if (packages.find()) for (String name : packages.group(1).split(",\\s*")) if (name.equals(packageName)) owns = true;
             if (!owns || !Pattern.compile("(?m)^    user #\\d+ uid=" + root.uid + " ISOLATED uid=" + e.uid + "(?:\\s|$)").matcher(e.body).find()) continue;

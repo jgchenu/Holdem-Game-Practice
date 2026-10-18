@@ -11,8 +11,6 @@ final class PracticeUITests: XCTestCase {
     }
 
     private func captureBootState(_ app: XCUIApplication, name: String) {
-        let image = XCTAttachment(screenshot: app.screenshot())
-        image.name = name; image.lifetime = .keepAlways; add(image)
         let state = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "BOOTSTATE ")).firstMatch
         if state.exists {
             let record = XCTAttachment(data: Data(state.label.utf8), uniformTypeIdentifier: "public.plain-text")
@@ -42,6 +40,9 @@ final class PracticeUITests: XCTestCase {
         }, object: nil)
         let result = XCTWaiter.wait(for: [ready], timeout: 60)
         if result == .completed { print("Native first window geometry: \(window.frame)") }
+        // Keep startup diagnostics text-only. A device screenshot request in
+        // the first WebKit navigation can itself time out before the first tap.
+        // Actual guide screenshots remain after the successful real interaction.
         captureBootState(app, name: result == .completed ? "ios-first-window-geometry" : "ios-invalid-native-window-geometry")
         XCTAssertEqual(result, .completed, "The first process needs a finite native window before querying hit points")
     }
