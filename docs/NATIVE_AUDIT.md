@@ -13,6 +13,10 @@ IOS_TEST_DEVICE=<模拟器 UUID> npm run audit:ios
 
 两个命令使用单独的验收构建，开启精美画质与完整动效，通过原生触摸事件开启真实 Web Audio。检查首次触摸前未创建音频上下文、开启/静音、切后台暂停、恢复后手牌不变，并连续运行至少 65 秒的真实牌局。测试通过只表示这些检查完成，帧时间是否达标应另看报告。
 
+Android 新增 15 轮原生长测命令：`node scripts/android-runtime-soak.mjs`，要求仅连接一台已确认的测试模拟器。每轮由实际 touchscreen down/up 点击内置连续验收，检查 isTrusted、正常规则牌局、真实音频、新增音符和结束暂停；按包名、宿主 UID、相同 SandboxedProcessService 绑定识别独立 renderer，再逐 PID 读取实际 PSS / RSS，前后核对进程集合。不会把共享 WebView provider / zygote 当作本应用独占。此范围依据 [Android WebView 多进程内存说明](https://developer.android.com/topic/performance/memory/guide/webview-memory) 和 [dumpsys 字段说明](https://developer.android.com/tools/dumpsys)。PSS 按比例分摊共享页面，RSS 跨进程合计可能重复；不代表手机或 GPU 内存保证，不据有限采样宣称没有泄漏。
+
+该命令禁用真实模型与图形对照，不读取模型回复来推动牌局。系统内存查询在本轮报告固定后执行，下一轮开始前停顿两秒；测量没有主动请求堆转储或 GC，但 dumpsys 属于带开销的系统诊断。每轮日志只发带运行 UUID 的进度摘要，完整报告用小于 Android 日志行上限的 Base64 字节片段导出并严格检查完整性，避免长报告或中文被截断。`artifacts/android-extended-soak/observer.json` 中的进度不能代替原生最终报告和断言；只有 15 轮及完整进程采样全部完成才会标通过。中断保留已观察轮次。报告重组单元检查 29 项、原生 Java 编译通过；新的 15 轮实跑尚待完成，不将已实现的流程当成通过结果。
+
 验收过程会修改该模拟器中的偏好及练习进度。Android 只接受已确认的模拟器；不要在手机真机上执行这些测试。iOS 应显式选择测试专用设备。平台构建串行执行，采样期间也不要同时运行其他平台构建或浏览器测试。
 
 - Android 报告：`artifacts/android-native-runtime-<时间>.json`，来自 Gradle 保留的原生测试日志；测试结束卸载 App 后仍可导出。

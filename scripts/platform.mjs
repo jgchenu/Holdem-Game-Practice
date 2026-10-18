@@ -13,6 +13,8 @@ import { homedir } from "node:os";
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isolatedEmulator } from "./android-test-device.mjs";
+import { randomUUID } from "node:crypto";
+import { parseAndroidAudit } from "./native-audit-log.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const target = process.argv[2];
@@ -22,6 +24,9 @@ const liveAudit = audit && env.WENDAO_LIVE_AI === "1";
 const fixtureAudit = target === "desktop-audit" && env.WENDAO_COACH_FIXTURE === "1";
 const extendedIOSAudit = target === "ios-audit" && env.WENDAO_SOAK_CYCLES === "15";
 if (target === "ios-audit" && env.WENDAO_SOAK_CYCLES && !["1","15"].includes(env.WENDAO_SOAK_CYCLES)) throw new Error("iOS 长测轮数支持 1 或 15。");
+if (target === "android-audit" && env.WENDAO_SOAK_CYCLES && !["1","15"].includes(env.WENDAO_SOAK_CYCLES)) throw new Error("Android 长测轮数支持 1 或 15。");
+const auditRunToken = target === "android-audit" ? env.WENDAO_AUDIT_RUN_TOKEN || randomUUID() : "";
+if (auditRunToken && !/^[a-zA-Z0-9-]{8,64}$/.test(auditRunToken)) throw new Error("Invalid native audit run token");
 if (liveAudit && fixtureAudit) throw new Error("真实模型和接口替身验收不能同时启用。");
 env.VITE_NATIVE_AUDIT = audit ? "1" : "";
 env.VITE_STARTUP_TRACE = target === "ios-test" ? "1" : "";
@@ -160,7 +165,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
       target === "android-test" || target === "android-audit"
         ? ":app:connectedDebugAndroidTest"
         : ":app:assembleDebug",
-      ...(target === "android-audit" ? ["-Pandroid.testInstrumentationRunnerArguments.class=com.wendao.poker.NativeAuditTest", "-Pandroid.testInstrumentationRunnerArguments.phase=runtime-audit", `-Pandroid.testInstrumentationRunnerArguments.liveCoach=${liveAudit}`, `-Pandroid.testInstrumentationRunnerArguments.graphicsCompare=${env.WENDAO_GRAPHICS_COMPARE === "1"}`] : []),
+      ...(target === "android-audit" ? ["-Pandroid.testInstrumentationRunnerArguments.class=com.wendao.poker.NativeAuditTest", "-Pandroid.testInstrumentationRunnerArguments.phase=runtime-audit", `-Pandroid.testInstrumentationRunnerArguments.liveCoach=${liveAudit}`, `-Pandroid.testInstrumentationRunnerArguments.graphicsCompare=${env.WENDAO_GRAPHICS_COMPARE === "1"}`, `-Pandroid.testInstrumentationRunnerArguments.soakCycles=${env.WENDAO_SOAK_CYCLES || "1"}`, `-Pandroid.testInstrumentationRunnerArguments.auditRunToken=${auditRunToken}`] : []),
     ],
     join(root, "android"),
   );
@@ -174,9 +179,9 @@ if (target === "android" || target === "android-test" || target === "android-aud
     // from its captured native test output instead of reading deleted app data.
     const resultDirectory = join(root, "android/app/build/outputs/androidTest-results/connected/debug");
     const logs = readdirSync(resultDirectory, { recursive: true }).filter(name => name.endsWith("logcat-com.wendao.poker.NativeAuditTest-audioLifecycleAndSustainedFrames.txt"));
-    const records = logs.flatMap(name => readFileSync(join(resultDirectory, name), "utf8").split("\n").filter(line => line.includes("Native runtime audit: ")));
-    if (records.length !== 1) throw new Error("Android 运行验收报告数量异常。");
-    const report = JSON.parse(records[0].split("Native runtime audit: ")[1]);
+    const records = logs.flatMap(name => readFileSync(join(resultDirectory, name), "utf8").split("\n"));
+    const report = parseAndroidAudit(records);
+    if (report.runToken !== auditRunToken) throw new Error("Android 运行报告不属于本轮测试。");
     writeFileSync(join(root, "artifacts", `android-native-runtime-${Date.now()}.json`), JSON.stringify(report, null, 2) + "\n");
   }
   if (target === "android-test")
