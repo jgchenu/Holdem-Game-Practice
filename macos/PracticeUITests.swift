@@ -52,7 +52,7 @@ final class PracticeUITests: XCTestCase {
             XCTFail("Only the isolated CI copy may be launched"); return
         }
         let app = XCUIApplication(url: URL(fileURLWithPath: path))
-        app.launch()
+        app.launch(); app.activate()
         defer { app.terminate() }
         let entry = button(app, containing: "从零学德州")
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: entry)
