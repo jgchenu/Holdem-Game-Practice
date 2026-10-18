@@ -85,4 +85,22 @@ test('画布诊断读取实际渲染器缓冲区，不改变当前手牌与灵�
     await page.screenshot({path:`artifacts/composite-${variant}-${testInfo.project.name}.png`});
   }
   expect(await page.locator('#live-table canvas').getAttribute('style')).toBe(originalStyle);
+  await page.getByRole('button',{name:'运行验收',exact:true}).click();
+  await page.getByRole('button',{name:'检查基础画布',exact:true}).click();
+  const basic=JSON.parse((await page.locator('#audit-basic-state').textContent())!.slice('BASIC '.length));
+  expect(basic).toEqual({canvas2DCenter:'255,255,255,255',defaultCreated:true,defaultPreserved:false,defaultCenter:'255,255,255,255',retainedCreated:true,retainedPreserved:true,retainedCenter:'255,255,255,255'});
+  await page.getByRole('button',{name:'收起验收',exact:true}).click();await expect(page.locator('#audit-panel')).toBeHidden();
+  await expect(page.getByRole('img',{name:'基础绘图对照，仅诊断'})).toBeVisible();
+  await page.screenshot({path:`artifacts/basic-surfaces-${testInfo.project.name}.png`});
+  await page.getByRole('button',{name:'运行验收',exact:true}).click();
+  await page.getByRole('button',{name:'移除基础画布',exact:true}).click();
+  await expect(page.locator('#basic-surface-controls')).toHaveCount(0);
+  expect({hand:await page.locator('#live-table').getAttribute('aria-label'),wallet:await page.locator('#wallet').textContent()}).toEqual(before);
+  await page.getByRole('button',{name:'检查基础画布',exact:true}).click();
+  await page.getByRole('button',{name:'连续牌局验收',exact:true}).click();
+  await expect(page.locator('#basic-surface-controls')).toHaveCount(0);
+  await page.getByRole('button',{name:'运行验收',exact:true}).click();
+  await page.getByRole('button',{name:'停止验收',exact:true}).click();
+  await expect(page.locator('#audit-status')).toHaveAttribute('data-phase','failed');
+  await expect(page.locator('#audit-status')).toContainText('本轮未完成');
 });

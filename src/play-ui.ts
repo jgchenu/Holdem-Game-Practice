@@ -176,6 +176,52 @@ function captureRendererProbe() {
 }
 
 if (import.meta.env.VITE_NATIVE_AUDIT === "1" || import.meta.env.DEV) {
+  let clearBasicSurfaces = () => {};
+  removeGlobalListeners.push(() => clearBasicSurfaces());
+  listen(document, "click", event => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("#audit-run, #audit-basic-clear")) { clearBasicSurfaces(); return; }
+    if (!target?.closest("#audit-basic-probe") || document.querySelector<HTMLButtonElement>("#audit-run")?.disabled) return;
+    clearBasicSurfaces();
+    const strip = document.createElement("aside"); strip.id = "basic-surface-controls";
+    strip.setAttribute("role", "img"); strip.setAttribute("aria-label", "基础绘图对照，仅诊断");
+    strip.style.cssText = "position:fixed;left:8px;top:8px;z-index:10000;width:280px;max-width:94vw;background:#10281f;color:#fff;padding:8px;display:flex;gap:10px;font:11px monospace";
+    strip.innerHTML = '<div>DOM<div style="width:52px;height:52px;background:#33cc66;display:grid;place-items:center"><span style="width:13px;height:13px;background:white"></span></div></div>';
+    document.body.appendChild(strip);
+    const facts: Record<string, string | number | boolean> = {};
+    const cleanups: (() => void)[] = [];
+    clearBasicSurfaces = () => { cleanups.forEach(clean => clean()); strip.remove(); };
+    for (const kind of ["2D", "GL", "GL保留"] as const) {
+      const cell = document.createElement("div"); cell.textContent = kind;
+      const canvas = document.createElement("canvas"); canvas.width = canvas.height = 64;
+      canvas.style.cssText = "display:block;width:52px;height:52px";
+      cell.appendChild(canvas); strip.appendChild(cell);
+      if (kind === "2D") {
+        const context = canvas.getContext("2d")!;
+        context.fillStyle = "#33cc66"; context.fillRect(0, 0, 64, 64);
+        context.fillStyle = "white"; context.fillRect(24, 24, 16, 16);
+        facts.canvas2DCenter = Array.from(context.getImageData(32, 32, 1, 1).data).join(",");
+      } else {
+        const key = kind === "GL" ? "default" : "retained";
+        const gl = canvas.getContext("webgl", {alpha:true, antialias:true, preserveDrawingBuffer:kind === "GL保留"});
+        facts[key + "Created"] = !!gl;
+        if (!gl) continue;
+        facts[key + "Preserved"] = gl.getContextAttributes()?.preserveDrawingBuffer === true;
+        let frame = 0;
+        const draw = () => {
+          gl.disable(gl.SCISSOR_TEST); gl.clearColor(.2, .8, .4, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.enable(gl.SCISSOR_TEST); gl.scissor(24, 24, 16, 16); gl.clearColor(1, 1, 1, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+          if (!facts[key + "Center"]) {
+            const pixel = new Uint8Array(4); gl.readPixels(32, 32, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+            facts[key + "Center"] = Array.from(pixel).join(",");
+          }
+          frame = requestAnimationFrame(draw);
+        };
+        draw(); cleanups.push(() => { cancelAnimationFrame(frame); gl.getExtension("WEBGL_lose_context")?.loseContext(); });
+      }
+    }
+    setDiagnosticText(get("audit-basic-state"), "BASIC " + JSON.stringify(facts));
+  });
   let restoreSurface = () => {};
   removeGlobalListeners.push(() => restoreSurface());
   listen(document, "click", event => {

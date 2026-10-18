@@ -252,3 +252,11 @@ CI 将 SDK 导出的原生 PNG、事实 JSON 与 manifest 一并上传轻量附�
 [39152684668](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39152684668) 普通原生像素检查仍失败。独立采集 1 test 通过、0 失败，成功写入并归档 probe.json，确认沙箱容器协议可用；轻量附件也已包含原生 PNG 与事实 JSON。缓冲区手牌浅色采样点10430，读取前后原生手牌像素0。
 
 实际检查三种对照及恢复截图，发现图片中验收面板仍覆盖牌桌；原生脚本此前在点击收起后立即截取，没有等待控件真正消失。因此这些对照截图不能证明任何合成方案有效或无效。现统一在收起操作后等待该原生按钮不存在，再截图；浏览器对照也明确检查面板 hidden。此为采集修正，未修改普通渲染器或放宽像素门禁。
+
+### f012149：无遮挡对照仍无牌面
+
+[39153570444](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39153570444) 已结束：普通像素门禁仍失败，独立采集 1 项通过。原生关闭断言通过，四张隔离层／独立层／外置／恢复截图已实际查看，验收面板确实收起，但仍没有牌桌像素。来源 `artifacts/macos-f012149-compact/`，实际环境为 Apple Virtual Machine 1 / macOS26.6.2；场景运行、contextLost=false，缓冲区有10410个手牌浅色采样点。没有把上述 CSS 对照作为产品修复提交到普通渲染路径。
+
+新增按需基础绘图对照：DOM、Canvas2D、默认 WebGL 与保留缓冲区 WebGL 分别绘制相同绿色／白色色块，同时记录各自真实读取值。只有 audit/dev 中点击才创建，移除、开始连续验收或销毁界面时取消自己的循环并释放自己的上下文；不改 Phaser 渲染器。原生脚本在面板关闭后单独截图，结果待云端采集。普通前端17文件仍与 main13 相同；原生宏编译通过。首次浏览器执行被类型修正触发的热重载打断，失败 trace 已保留在 `artifacts/macos-basic-surface-interrupted/`，未算整轮成功；冻结后四种配置通过并实际查看移动 WebKit 与320px截图（`artifacts/macos-basic-surface-frozen-browser.log`）。
+
+基础对照补充清理回归：四种浏览器配置均确认开始连续验收后对照 DOM 已移除，随后显式停止该轮并断言 failed／本轮未完成，不把取消操作称为完成65秒采样。最终日志为 `artifacts/macos-basic-surface-final-browser.log`（4 passed）。

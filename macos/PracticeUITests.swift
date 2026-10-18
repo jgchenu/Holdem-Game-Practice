@@ -200,9 +200,22 @@ final class PracticeUITests: XCTestCase {
                 attachment.name = "native-composite-\(variant)"; attachment.lifetime = .keepAlways; add(attachment)
                 comparisons.append(["variant": variant])
             }
+            open.click(); button(app, containing: "检查基础画布").click()
+            let basic = diagnosticText(app, containing: "BASIC ")
+            XCTAssertTrue(basic.waitForExistence(timeout: 10))
+            let basicText = try XCTUnwrap([basic.value as? String, basic.label, basic.title].compactMap { $0 }.first { $0.contains("BASIC ") })
+            let basicStart = try XCTUnwrap(basicText.range(of: "BASIC ")?.upperBound)
+            let basicFacts = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(basicText.suffix(from: basicStart).utf8)) as? [String: Any])
+            closeAudit(app)
+            let controls = app.images["基础绘图对照，仅诊断"]
+            XCTAssertTrue(controls.waitForExistence(timeout: 10))
+            let basicScreen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            basicScreen.name = "native-basic-dom-2d-webgl-controls"; basicScreen.lifetime = .keepAlways; add(basicScreen)
+            open.click(); button(app, containing: "移除基础画布").click(); closeAudit(app)
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: controls)], timeout: 10), .completed)
             try write("probe.json", ["runID": runID, "facts": facts, "nativeCardPixelsBeforeProbe": nativePixels,
                 "nativeCardPixelsAfterReadback": lightCardPixels(restored), "tableFrameBeforeProbe": tableFrameBefore,
-                "appFrameBeforeProbe": appFrameBefore, "appStateBeforeProbe": appStateBefore, "compositorScreens": comparisons])
+                "appFrameBeforeProbe": appFrameBefore, "appStateBeforeProbe": appStateBefore, "compositorScreens": comparisons, "basicSurfaceFacts": basicFacts])
             print("Renderer facts collected; does not turn a failed ordinary screenshot into a pass")
             return
         }
