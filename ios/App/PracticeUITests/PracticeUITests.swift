@@ -28,12 +28,25 @@ final class PracticeUITests: XCTestCase {
         startup.name = ready ? "ios-cold-start-ready" : "ios-cold-start-not-ready"
         startup.lifetime = .keepAlways
         add(startup)
-        print("Native first-launch readiness: \(Date().timeIntervalSince(coldStart))s; simulator functional check, not a phone performance result")
+        print("Native first-page readiness: \(Date().timeIntervalSince(coldStart))s; simulator functional check, not a phone performance result")
         XCTAssertTrue(ready, "The first native process must render the practice UI without a relaunch")
         let start = button(app, containing: "入席修炼")
         let resume = button(app, containing: "继续修炼")
-        if start.exists { start.tap() }
-        else if resume.exists { resume.tap() }
+        let entry = start.exists ? start : resume
+        // The DOM appears before Phaser has finished creating its renderer.
+        // A disabled entry ignores taps; require the actual actionable state.
+        let actionable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"),
+            object: entry
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [actionable], timeout: 60), .completed,
+                       "The first native process must finish preparing the table before entering")
+        print("Native entry actionable: \(Date().timeIntervalSince(coldStart))s; simulator functional check, not a phone performance result")
+        let actionReady = XCTAttachment(screenshot: app.screenshot())
+        actionReady.name = "ios-cold-start-action-ready"
+        actionReady.lifetime = .keepAlways
+        add(actionReady)
+        entry.tap()
 
         XCTAssertTrue(table(app).waitForExistence(timeout: 20))
         mentor.tap()
