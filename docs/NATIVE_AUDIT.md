@@ -55,3 +55,9 @@ Android 原生页面已完成真实 DeepSeek 解读，网关健康检查 HTTP 20
 macOS 随后的独立连续验收已完成：65.2 秒、6 手牌、3912 个帧间隔样本，P95 18 ms、P99 20 ms、最大 29 ms，没有超过 50 ms 的样本；实际 renderer 为 Apple GPU、精美画质、完整动效。真实 AudioContext 在结束后为 suspended；启动连续验收前也观察到音频上下文尚未创建。数据来自原生窗口固定后的 `MEASURE` 显示，人工抄录于 `artifacts/macos-native-continuous-runtime.json`，不是浏览器替代。该次没有同时运行构建或浏览器回归；采样期间有小量文档写入与短时 xcresult 附件导出，已记录范围。App 主进程 RSS 单点为 101664 KiB，不包含 WebKit 子进程，不能据此判定没有泄漏。
 
 启动顺序和原生触摸调整后，全新 iOS 26.5 模拟器常规回归 3 项通过、审计项按配置跳过，报告为 `artifacts/ios-native-1792307594180.xcresult`。云端首次触摸仍待对应新提交验证。Windows 已补充独立验收构建及实际 WebView2 音频、最小化恢复、连续牌局和内存采样流程，尚未在 Windows 执行，不能当作通过结果。
+
+Web 生产验收构建也已在实际内置 Chromium 浏览器的 390×844、DPR 2 页面完成连续采样：65.6 秒、7 手牌、7877 个回调样本，P95 9.1 ms、最大 16.7 ms，真实音频在结束后为 suspended。数据由页面固定报告直接保存至 `artifacts/web-mobile-continuous-runtime.json`，截图为 `artifacts/web-mobile-continuous-runtime.jpg`。此环境的回调频率高于 60 Hz，不能把该数值当作游戏 GPU 呈现帧率或手机性能；实际 renderer 为 ANGLE Metal / Apple M1 Pro。构建命令为 `npm run build:web-audit`，独立输出 `artifacts/web-audit/`，不读取本机模型配置；临时验收页关闭后已恢复浏览器尺寸，正常游戏仍位于 5173。
+
+040edb5 的 Windows 正式安装版功能检查通过，但新增验收构建因 cmd.exe 去掉内联 JSON 引号而失败，音频/持续采样没有执行。日志保留在 `artifacts/native-runtime-windows-job.log`。现改成生成单独配置文件传给 Tauri，修复后的 Windows 运行结果待 CI 确认；不能用 macOS 上的成功代替 Windows。
+
+040edb5 云端整轮仍失败：iOS 首次冷启动的教学入口等待可操作超时，另外两项原生功能测试通过。失败视频在 78 秒时能看到完整主界面，但不能仅据此判断是触摸、辅助功能还是异步启动准备的问题；尚未确认根因。报告保存在 `artifacts/ios-040edb5-run/`，截图为 `artifacts/ios-040-startup-78.png`。保留此失败，不将本机成功等同于云端首次进入已修复。

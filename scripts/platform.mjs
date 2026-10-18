@@ -102,10 +102,14 @@ if (target.startsWith("desktop")) {
     run("cargo", ["test", "--locked", "--release", "--manifest-path", "src-tauri/Cargo.toml", "--lib"]);
     process.exit(0);
   }
+  // A file avoids cmd.exe stripping the JSON quotes from a .cmd invocation.
+  // Keep the argument relative and space-free even when the checkout path has spaces.
+  const auditConfig = join("artifacts", "desktop-audit-config.json");
+  if (audit) writeFileSync(join(root, auditConfig), JSON.stringify({ productName: "问道牌途验收", identifier: "com.wendao.poker.audit.desktop" }));
   run(npx, [
     "tauri",
     "build",
-    ...(audit ? ["--config", JSON.stringify({ productName: "问道牌途验收", identifier: "com.wendao.poker.audit.desktop" })] : []),
+    ...(audit ? ["--config", auditConfig] : []),
     ...(target === "desktop-debug"
       ? ["--debug", "--no-bundle"]
       : ["--bundles", process.platform === "win32" ? "nsis" : "app,dmg"]),
