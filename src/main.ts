@@ -8,14 +8,21 @@ const appRoot = document.querySelector<HTMLDivElement>("#app")!;
 // transition finish. Expose controls only once they can actually receive input.
 appRoot.inert = true;
 try {
+  if (import.meta.env.VITE_STARTUP_TRACE === '1') {
+    (await import('./startup-trace')).initializeStartupTrace();
+  }
   const dispose = await initializePlatform();
+  if (import.meta.env.VITE_NATIVE_AUDIT === '1') {
+    await (await import('./native-audit')).initializeNativeAudit();
+  }
   if (import.meta.hot) import.meta.hot.dispose(dispose);
   await prepareFonts();
   initializeOffline();
   if (new URLSearchParams(location.search).get("mode") === "demo") {
     await import("./demo-ui");
   } else {
-    await import("./play-ui");
+    const { practiceReady } = await import("./play-ui");
+    await practiceReady;
   }
 } catch (error) {
   console.error("Practice startup failed", error);

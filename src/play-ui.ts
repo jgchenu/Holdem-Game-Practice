@@ -87,6 +87,9 @@ let savedOK = !saved.corrupt && storageHealthy(),
   notice = "";
 let learned = loadLearning();
 let completedTrials = loadTrials();
+let finishPreparing: () => void;
+// Module import binds the controls, but Phaser prepares its renderer asynchronously.
+export const practiceReady = new Promise<void>(resolve => { finishPreparing = resolve; });
 const scene = new LiveScene(prefs, {
   ready: () => {
     void initialize();
@@ -123,6 +126,7 @@ async function initialize() {
   }
   busy = false;
   updateUI();
+  finishPreparing();
 }
 function report(error: unknown) {
   failed = true;

@@ -7,6 +7,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  readdirSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { resolve, join } from "node:path";
@@ -16,8 +17,13 @@ import { isolatedEmulator } from "./android-test-device.mjs";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const target = process.argv[2];
 const env = { ...process.env };
+const audit = ["ios-audit", "android-audit", "desktop-audit"].includes(target);
+const liveAudit = audit && env.WENDAO_LIVE_AI === "1";
+env.VITE_NATIVE_AUDIT = audit ? "1" : "";
+env.VITE_STARTUP_TRACE = target === "ios-test" ? "1" : "";
 // Native test runs never contact a configured, billable mentor service.
-if (target === "ios-test" || target === "android-test") env.VITE_COACH_URL = "";
+if (target === "ios-test" || target === "android-test" || audit)
+  env.VITE_COACH_URL = liveAudit ? "http://127.0.0.1:8787/api/coach" : "";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 const packages = join(root, "artifacts", "packages");
@@ -73,17 +79,20 @@ if (
     "sync",
     "android",
     "android-test",
+    "android-audit",
     "ios-sim",
     "ios-test",
+    "ios-audit",
     "ios-device",
     "ios-signed",
     "desktop",
     "desktop-debug",
     "desktop-test",
+    "desktop-audit",
   ].includes(target)
 ) {
   console.error(
-    "Usage: node scripts/platform.mjs sync|android|android-test|ios-sim|ios-test|ios-device|ios-signed|desktop|desktop-debug|desktop-test",
+    "Usage: node scripts/platform.mjs sync|android|android-test|android-audit|ios-sim|ios-test|ios-audit|ios-device|ios-signed|desktop|desktop-debug|desktop-test|desktop-audit",
   );
   process.exit(1);
 }
@@ -96,6 +105,7 @@ if (target.startsWith("desktop")) {
   run(npx, [
     "tauri",
     "build",
+    ...(audit ? ["--config", JSON.stringify({ productName: "问道牌途验收", identifier: "com.wendao.poker.audit.desktop" })] : []),
     ...(target === "desktop-debug"
       ? ["--debug", "--no-bundle"]
       : ["--bundles", process.platform === "win32" ? "nsis" : "app,dmg"]),
@@ -105,7 +115,7 @@ if (target.startsWith("desktop")) {
 run(npm, ["run", "build"]);
 run(npx, ["cap", "sync"]);
 if (target === "sync") process.exit(0);
-if (target === "android" || target === "android-test") {
+if (target === "android" || target === "android-test" || target === "android-audit") {
   const studioJava =
     process.platform === "darwin"
       ? "/Applications/Android Studio.app/Contents/jbr/Contents/Home"
@@ -123,7 +133,7 @@ if (target === "android" || target === "android-test") {
   if (!existsSync(sdk))
     throw new Error("找不到 Android SDK，请设置 ANDROID_HOME。");
   env.ANDROID_HOME = sdk;
-  if (target === "android-test") {
+  if (target === "android-test" || target === "android-audit") {
     const adb = join(sdk, "platform-tools", process.platform === "win32" ? "adb.exe" : "adb");
     const listing = spawnSync(adb, ["devices"], { env, encoding: "utf8" });
     if (listing.error || listing.status !== 0) throw new Error("无法查询 Android 测试设备。");
@@ -139,23 +149,34 @@ if (target === "android" || target === "android-test") {
   run(
     process.platform === "win32" ? "gradlew.bat" : "./gradlew",
     [
-      target === "android-test"
+      target === "android-test" || target === "android-audit"
         ? ":app:connectedDebugAndroidTest"
         : ":app:assembleDebug",
+      ...(target === "android-audit" ? ["-Pandroid.testInstrumentationRunnerArguments.class=com.wendao.poker.NativeAuditTest", "-Pandroid.testInstrumentationRunnerArguments.phase=runtime-audit", `-Pandroid.testInstrumentationRunnerArguments.liveCoach=${liveAudit}`, `-Pandroid.testInstrumentationRunnerArguments.graphicsCompare=${env.WENDAO_GRAPHICS_COMPARE === "1"}`] : []),
     ],
     join(root, "android"),
   );
   copyFileSync(
     join(root, "android/app/build/outputs/apk/debug/app-debug.apk"),
-    join(packages, "wendao-android-debug.apk"),
+    join(packages, audit ? "wendao-android-audit.apk" : "wendao-android-debug.apk"),
   );
-  console.log("Android 调试 APK：artifacts/packages/wendao-android-debug.apk");
+  console.log(`Android ${audit ? "验收" : "调试"} APK：artifacts/packages/${audit ? "wendao-android-audit.apk" : "wendao-android-debug.apk"}`);
+  if (target === "android-audit") {
+    // Gradle may uninstall the app when instrumentation ends. Retain the report
+    // from its captured native test output instead of reading deleted app data.
+    const resultDirectory = join(root, "android/app/build/outputs/androidTest-results/connected/debug");
+    const logs = readdirSync(resultDirectory, { recursive: true }).filter(name => name.endsWith("logcat-com.wendao.poker.NativeAuditTest-audioLifecycleAndSustainedFrames.txt"));
+    const records = logs.flatMap(name => readFileSync(join(resultDirectory, name), "utf8").split("\n").filter(line => line.includes("Native runtime audit: ")));
+    if (records.length !== 1) throw new Error("Android 运行验收报告数量异常。");
+    const report = JSON.parse(records[0].split("Native runtime audit: ")[1]);
+    writeFileSync(join(root, "artifacts", `android-native-runtime-${Date.now()}.json`), JSON.stringify(report, null, 2) + "\n");
+  }
   if (target === "android-test")
     run(process.execPath, ["scripts/android-process-death.mjs"]);
 } else {
   if (process.platform !== "darwin")
     throw new Error("iOS 构建需要 macOS 与 Xcode。");
-  const testing = target === "ios-test";
+  const testing = target === "ios-test" || target === "ios-audit";
   const simulator = target === "ios-sim" || testing,
     signed = target === "ios-signed";
   let destination = simulator
@@ -170,7 +191,7 @@ if (target === "android" || target === "android-test") {
     if (listing.status !== 0) throw new Error("无法查询 iOS 模拟器。");
     const devices = Object.values(JSON.parse(listing.stdout).devices)
       .flat()
-      .filter((device) => /iPhone|iPad/.test(device.name));
+      .filter((device) => /iPhone|iPad/.test(device.deviceTypeIdentifier || device.name));
     const device = env.IOS_TEST_DEVICE
       ? devices.find((device) => device.udid === env.IOS_TEST_DEVICE)
       : devices.find((device) => device.state === "Booted") || devices[0];
@@ -188,7 +209,7 @@ if (target === "android" || target === "android-test") {
   const derived = join(
     root,
     "artifacts",
-    simulator ? "ios" : signed ? "ios-signed" : "ios-device",
+    audit ? "ios-audit" : simulator ? "ios" : signed ? "ios-signed" : "ios-device",
   );
   run("xcodebuild", [
     "-project",
@@ -201,6 +222,7 @@ if (target === "android" || target === "android-test") {
     destination,
     "-derivedDataPath",
     derived,
+    ...(audit ? [`SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) NATIVE_AUDIT${liveAudit ? " NATIVE_LIVE_AI" : ""}`, "-only-testing:PracticeUITests/PracticeUITests/testNativeRuntimeAudioAndFrames"] : []),
     ...(signed
       ? [
           "CODE_SIGNING_ALLOWED=YES",
@@ -214,14 +236,14 @@ if (target === "android" || target === "android-test") {
           "-parallel-testing-enabled",
           "NO",
           "-resultBundlePath",
-          join(root, "artifacts", `ios-native-${Date.now()}.xcresult`),
+          join(root, "artifacts", `ios-${audit ? "audit" : "native"}-${Date.now()}.xcresult`),
           "test",
         ]
       : ["build"]),
   ]);
   console.log(
     simulator
-      ? "iOS 模拟器产物：artifacts/ios/Build/Products/Debug-iphonesimulator/App.app"
+      ? `iOS 模拟器产物：artifacts/${audit ? "ios-audit" : "ios"}/Build/Products/Debug-iphonesimulator/App.app`
       : signed
         ? "iOS 开发签名产物：artifacts/ios-signed/Build/Products/Debug-iphoneos/App.app"
         : "iOS 真机未签名产物：artifacts/ios-device/Build/Products/Debug-iphoneos/App.app；安装到真机前须由开发者签名。",

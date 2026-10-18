@@ -73,6 +73,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:ios
+      # Test-only input tracing must not ship in the simulator package.
+      - run: npm run build:ios
       - name: Archive simulator app preserving bundle permissions
         run: ditto -c -k --sequesterRsrc --keepParent artifacts/ios/Build/Products/Debug-iphonesimulator/App.app artifacts/packages/wendao-ios-simulator.zip
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

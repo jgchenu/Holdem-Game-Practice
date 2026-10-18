@@ -34,7 +34,18 @@ final class PracticeUITests: XCTestCase {
         requireActionable(entry)
         print("Native guide entry actionable: \(Date().timeIntervalSince(coldStart))s; simulator functional check, not a phone performance result")
         entry.tap()
-        XCTAssertTrue(app.buttons["关闭新手教学"].waitForExistence(timeout: 20), "The first tap must open the guide without retrying or relaunching")
+        let opened = app.buttons["关闭新手教学"].waitForExistence(timeout: 20)
+        if !opened && app.buttons["启动诊断"].exists {
+            let image = XCTAttachment(screenshot: app.screenshot())
+            image.name = "ios-first-guide-tap-not-open"; image.lifetime = .keepAlways; add(image)
+            app.buttons["启动诊断"].tap()
+            let trace = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "STARTUP ")).firstMatch
+            if trace.waitForExistence(timeout: 10) {
+                let record = XCTAttachment(data: Data(trace.label.utf8), uniformTypeIdentifier: "public.plain-text")
+                record.name = "ios-first-guide-input-trace"; record.lifetime = .keepAlways; add(record)
+            }
+        }
+        XCTAssertTrue(opened, "The first tap must open the guide without retrying or relaunching")
         if app.buttons["再跟师父学一遍"].exists {
             requireActionable(app.buttons["再跟师父学一遍"])
             app.buttons["再跟师父学一遍"].tap()
@@ -169,5 +180,76 @@ final class PracticeUITests: XCTestCase {
         button(app, containing: "进入修炼阁").tap()
         XCTAssertTrue(button(app, containing: "静观 · 免费过牌").waitForExistence(timeout: 10))
         XCTAssertTrue(button(app, containing: "静观 · 免费过牌").label.contains("已达成"), "Native process relaunch must hydrate the trial seal from Preferences")
+    }
+
+    func testNativeRuntimeAudioAndFrames() throws {
+        #if !NATIVE_AUDIT
+        throw XCTSkip("Run npm run audit:ios to opt into the native runtime audit")
+        #else
+        continueAfterFailure = false
+        let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")
+        app.launch()
+        requireActionable(app.buttons["运行验收"], timeout: 60)
+        requireActionable(app.buttons["新手教学"], timeout: 60)
+        let sample = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "AUDIT ")).firstMatch
+        func auditContains(_ text: String) {
+            app.buttons["运行验收"].tap()
+            let match = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", text), object: sample)
+            XCTAssertEqual(XCTWaiter.wait(for: [match], timeout: 20), .completed)
+        }
+        app.buttons["运行验收"].tap()
+        XCTAssertTrue(sample.waitForExistence(timeout: 10))
+        XCTAssertTrue(sample.label.contains("\"audioStates\":[]"), "Audio must remain lazy before a trusted sound gesture")
+        app.switches["开启音效"].tap()
+        auditContains("\"audioStates\":[\"running\"]")
+        app.buttons["收起验收"].tap()
+        let start = button(app, containing: "入席修炼")
+        let resume = button(app, containing: "继续修炼")
+        let next = button(app, containing: "下一手")
+        let entry = resume.exists ? resume : start.exists ? start : next
+        requireActionable(entry)
+        entry.tap()
+        let call = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "跟注", "过牌")).firstMatch
+        requireActionable(call)
+        let before = table(app).label
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        requireActionable(resume)
+        XCTAssertEqual(table(app).label, before, "Backgrounding must preserve the hand at the hero's turn")
+        auditContains("\"audioStates\":[\"suspended\"]")
+        app.buttons["收起验收"].tap()
+        resume.tap()
+        auditContains("\"audioStates\":[\"running\"]")
+        app.switches["关闭音效"].tap()
+        auditContains("\"audioStates\":[\"suspended\"]")
+        app.switches["开启音效"].tap()
+        auditContains("\"audioStates\":[\"running\"]")
+        app.buttons["重置采样"].tap()
+        app.buttons["收起验收"].tap()
+        let end = Date().addingTimeInterval(65)
+        while Date() < end {
+            if next.exists && next.isEnabled && next.isHittable { next.tap() }
+            else if call.exists && call.isEnabled && call.isHittable { call.tap() }
+            else { RunLoop.current.run(until: Date().addingTimeInterval(0.15)) }
+        }
+        app.switches["关闭音效"].tap()
+        auditContains("\"audioStates\":[\"suspended\"]")
+        let text = String(sample.label.dropFirst("AUDIT ".count))
+        let result = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["elapsedMs"] as? Int), 65000)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["frames"] as? Int), 1000)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["busyFrames"] as? Int), 30)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["completedHands"] as? Int), 2)
+        XCTAssertGreaterThan(try XCTUnwrap(result["hidden"] as? Int), 0)
+        XCTAssertGreaterThan(try XCTUnwrap(result["suspends"] as? Int), 0)
+        let evidence = XCTAttachment(data: Data(text.utf8), uniformTypeIdentifier: "public.json")
+        evidence.name = "ios-native-runtime-audit"; evidence.lifetime = .keepAlways; add(evidence)
+        #if NATIVE_LIVE_AI
+        app.buttons["收起验收"].tap()
+        app.buttons["请教青玄师父"].tap()
+        app.buttons["衡量价格"].tap()
+        XCTAssertTrue(app.staticTexts["AI 解读 · 可能有误，请结合程序事实判断"].waitForExistence(timeout: 20))
+        #endif
+        #endif
     }
 }
