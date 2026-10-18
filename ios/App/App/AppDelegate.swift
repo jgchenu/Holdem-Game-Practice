@@ -39,6 +39,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let config = UISceneConfiguration(name: "Default Configuration",
                                           sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
+        // SceneDelegate owns the window and bridge. Do not also instantiate
+        // the legacy storyboard's bridge before replacing its window.
+        config.storyboard = nil
         return config
     }
 }

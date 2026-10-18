@@ -107,6 +107,23 @@ test('新手可看九种牌型示例与比牌说明，小屏滚动保留继续�
   await expect(page.locator('#tutorial-step-title')).toHaveText('牌上的字和图案怎么看');
 });
 
+test('教学弹窗位于上下安全区内，关闭按钮触控区域足够', async ({page}) => {
+  await page.goto('/');
+  await page.locator('#learn-start').click();
+  // Exercise the layout with explicit inset values; native safe-area values
+  // are verified separately in XCTest and its actual simulator screenshots.
+  await page.locator('#tutorial-dialog').evaluate(el => {
+    el.style.setProperty('--tutorial-safe-top','62px');
+    el.style.setProperty('--tutorial-safe-bottom','34px');
+  });
+  const dialog = await page.locator('#tutorial-dialog').boundingBox();
+  expect(dialog!.y).toBeGreaterThanOrEqual(62);
+  expect(dialog!.y + dialog!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 34);
+  const close = await page.getByRole('button',{name:'关闭新手教学'}).boundingBox();
+  expect(close!.width).toBeGreaterThanOrEqual(44);
+  expect(close!.height).toBeGreaterThanOrEqual(44);
+});
+
 test('牌局中能找到新手教学，教学暂停并保留原手牌与灵石', async ({page})=>{
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.goto('/');

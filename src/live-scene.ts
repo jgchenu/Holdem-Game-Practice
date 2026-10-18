@@ -42,6 +42,7 @@ export class LiveScene extends Phaser.Scene {
     public preferences: Preferences,
     private hooks: {
       ready: () => void;
+      failed: (error: unknown) => void;
       metrics: (fps: number, p95: number) => void;
     },
   ) {
@@ -49,6 +50,12 @@ export class LiveScene extends Phaser.Scene {
   }
 
   create() {
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.feedback.dispose());
+    try { this.prepareScene(); }
+    catch (error) { this.hooks.failed(error); }
+  }
+
+  private prepareScene() {
     this.cameras.main.setZoom(2).setScroll(-210, -250);
     createTextures(this);
     this.add.image(210, 250, "table").setDisplaySize(360, 430);
@@ -170,7 +177,6 @@ export class LiveScene extends Phaser.Scene {
       this,
     );
     this.scale.on(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.feedback.dispose());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.refreshTypography, this);
       this.game.events.off(

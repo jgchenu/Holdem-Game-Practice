@@ -10,12 +10,33 @@ final class PracticeUITests: XCTestCase {
         app.images.matching(NSPredicate(format: "label CONTAINS %@", "你的底牌")).firstMatch
     }
 
-    private func requireActionable(_ element: XCUIElement, timeout: TimeInterval = 20) {
+    private func captureStartup(_ app: XCUIApplication, name: String) {
+        let image = XCTAttachment(screenshot: app.screenshot())
+        image.name = name; image.lifetime = .keepAlways; add(image)
+        let state = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "BOOTSTATE ")).firstMatch
+        if state.exists {
+            let record = XCTAttachment(data: Data(state.label.utf8), uniformTypeIdentifier: "public.plain-text")
+            record.name = name + "-state"; record.lifetime = .keepAlways; add(record)
+        }
+        let diagnostic = app.buttons["启动诊断"]
+        if diagnostic.exists && diagnostic.isHittable {
+            diagnostic.tap()
+            let trace = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "STARTUP ")).firstMatch
+            if trace.waitForExistence(timeout: 10) {
+                let record = XCTAttachment(data: Data(trace.label.utf8), uniformTypeIdentifier: "public.plain-text")
+                record.name = name + "-input-trace"; record.lifetime = .keepAlways; add(record)
+            }
+        }
+    }
+
+    private func requireActionable(_ element: XCUIElement, timeout: TimeInterval = 20, in app: XCUIApplication? = nil) {
         let ready = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"),
             object: element
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: timeout), .completed)
+        let result = XCTWaiter.wait(for: [ready], timeout: timeout)
+        if result != .completed, let app { captureStartup(app, name: "ios-entry-not-actionable") }
+        XCTAssertEqual(result, .completed)
     }
 
     func testNativeBeginnerGuidePersistsWithoutStartingPractice() throws {
@@ -26,25 +47,16 @@ final class PracticeUITests: XCTestCase {
         // Exercise the primary first-time-player entry in the first process.
         // Do not tap merely because a WebKit accessibility node has appeared.
         let mentor = app.buttons["新手教学"]
-        requireActionable(mentor, timeout: 60)
+        requireActionable(mentor, timeout: 60, in: app)
         let learn = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "从零学德州", "复习新手教学")).firstMatch
         // A reused local test simulator may already have a saved practice hand;
         // fresh CI installs exercise the primary entry without clearing saves.
         let entry = learn.exists ? learn : mentor
-        requireActionable(entry)
+        requireActionable(entry, in: app)
         print("Native guide entry actionable: \(Date().timeIntervalSince(coldStart))s; simulator functional check, not a phone performance result")
         entry.tap()
         let opened = app.buttons["关闭新手教学"].waitForExistence(timeout: 20)
-        if !opened && app.buttons["启动诊断"].exists {
-            let image = XCTAttachment(screenshot: app.screenshot())
-            image.name = "ios-first-guide-tap-not-open"; image.lifetime = .keepAlways; add(image)
-            app.buttons["启动诊断"].tap()
-            let trace = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "STARTUP ")).firstMatch
-            if trace.waitForExistence(timeout: 10) {
-                let record = XCTAttachment(data: Data(trace.label.utf8), uniformTypeIdentifier: "public.plain-text")
-                record.name = "ios-first-guide-input-trace"; record.lifetime = .keepAlways; add(record)
-            }
-        }
+        if !opened { captureStartup(app, name: "ios-first-guide-tap-not-open") }
         XCTAssertTrue(opened, "The first tap must open the guide without retrying or relaunching")
         if app.buttons["再跟师父学一遍"].exists {
             requireActionable(app.buttons["再跟师父学一遍"])
@@ -61,6 +73,26 @@ final class PracticeUITests: XCTestCase {
         let hole = button(app, containing: "点击你的两张底牌")
         requireActionable(hole)
         hole.tap()
+        let guide = button(app, containing: "九种牌型图鉴")
+        app.swipeUp()
+        requireActionable(guide)
+        guide.tap()
+        let example = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "四条示例：")).firstMatch
+        XCTAssertTrue(example.waitForExistence(timeout: 10), "The native guide must expose the actual five-card example")
+        for _ in 0..<3 {
+            if example.frame.height >= 54 && example.frame.minY > app.frame.minY + 130 && example.frame.maxY < app.buttons["明白了，继续 →"].frame.minY { break }
+            app.swipeUp()
+        }
+        XCTAssertGreaterThan(example.frame.minY, app.frame.minY + 130)
+        XCTAssertGreaterThanOrEqual(example.frame.height, 54, "The card row must be fully visible rather than a clipped accessibility frame")
+        XCTAssertLessThan(example.frame.maxY, app.buttons["明白了，继续 →"].frame.minY, "All five cards must fit above the fixed teaching action")
+        let closeGuide = app.buttons["关闭新手教学"]
+        XCTAssertGreaterThanOrEqual(closeGuide.frame.height, 44)
+        if app.statusBars.firstMatch.exists {
+            XCTAssertGreaterThanOrEqual(closeGuide.frame.minY, app.statusBars.firstMatch.frame.maxY)
+        }
+        let guideImage = XCTAttachment(screenshot: app.screenshot())
+        guideImage.name = "ios-native-hand-guide"; guideImage.lifetime = .keepAlways; add(guideImage)
         requireActionable(app.buttons["明白了，继续 →"])
         app.buttons["明白了，继续 →"].tap()
         XCTAssertTrue(app.staticTexts["桌子中间的灵石池"].waitForExistence(timeout: 10))

@@ -1,5 +1,26 @@
 import { test, expect } from '@playwright/test';
 
+test('渲染器启动出错后提供可操作的重试，重试后教学正常进入', async ({page}) => {
+  let injected = false;
+  await page.route('**/src/live-scene.ts', async route => {
+    const response = await route.fetch(), body = await response.text();
+    expect(body).toContain('createTextures(this);');
+    // Keep routing on reload: WebKit can cache a fulfilled response when the
+    // route is removed, which would inject the same fault into the retry.
+    const result = injected ? body : body.replace('createTextures(this);', 'throw new Error("Injected scene preparation failure");');
+    injected = true;
+    await route.fulfill({response,body:result});
+  });
+  await page.goto('/');
+  await expect(page.locator('#app')).toHaveAttribute('data-boot-phase','failed');
+  await expect(page.locator('#app')).toHaveJSProperty('inert',false);
+  await expect(page.getByRole('alert')).toContainText('暂时未能铺开牌席');
+  await page.locator('#boot-retry').click();
+  await expect(page.locator('#app')).toHaveAttribute('data-boot-phase','ready');
+  await page.locator('#learn-start').click();
+  await expect(page.getByRole('button',{name:'关闭新手教学'})).toBeVisible();
+});
+
 test('牌桌异步准备完成前保持启动保护，完成后教学可用', async ({ page }) => {
   // Delay only the real renderer's ready notification, after it has created the scene.
   // This checks the asynchronous boundary; it is not a native startup benchmark.

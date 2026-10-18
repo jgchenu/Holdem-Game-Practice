@@ -1269,8 +1269,9 @@ html[data-platform="native"] .web-install-note {
 .beginner-entry .secondary-button:disabled { opacity:.5; }
 .mentor-heading { flex-wrap:wrap; }
 #tutorial-open { margin-left:9px; }
-#tutorial-dialog { width:min(640px,calc(100% - 20px)); height:min(820px,94dvh); max-height:94dvh; padding:0; overflow:hidden; }
+#tutorial-dialog { --tutorial-safe-top:max(10px,env(safe-area-inset-top)); --tutorial-safe-bottom:max(10px,env(safe-area-inset-bottom)); position:fixed; inset:var(--tutorial-safe-top) 0 var(--tutorial-safe-bottom); margin:auto; width:min(640px,calc(100% - 20px)); height:min(820px,94dvh,calc(100dvh - var(--tutorial-safe-top) - var(--tutorial-safe-bottom))); max-height:calc(100dvh - var(--tutorial-safe-top) - var(--tutorial-safe-bottom)); padding:0; overflow:hidden; }
 #tutorial-dialog[open] { display:flex; flex-direction:column; }
+#tutorial-dialog .close-button { min-width:44px; min-height:44px; margin-right:-6px; }
 #tutorial-dialog .dialog-header { margin:0; padding:18px 20px 12px; flex-shrink:0; }
 #tutorial-dialog h2 { font-size:22px; }
 #tutorial-body { display:flex; flex-direction:column; flex:1; min-height:0; }

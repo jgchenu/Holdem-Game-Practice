@@ -302,6 +302,13 @@ try {
   await until(() => execute("return document.querySelector('#tutorial-step-title').textContent.includes('两张底牌') && !document.querySelector('#tutorial-next').disabled"), "beginner hole-card step");
   await click("#tutorial-hole");
   await until(() => execute("return document.querySelector('#tutorial-step-title').textContent.includes('字和图案') && !document.querySelector('#tutorial-next').disabled"), "beginner rank step");
+  await click('.hand-guide > summary');
+  assert.deepEqual(await execute("return {open:document.querySelector('.hand-guide').open,examples:document.querySelectorAll('.hand-guide-list > li').length,cards:document.querySelectorAll('.hand-guide-cards .trial-card').length}"), {open:true,examples:9,cards:45});
+  await click('[data-hand-category="1"] .hand-guide-compare > summary');
+  assert.equal(await execute("return document.querySelector('[data-hand-category=\"1\"] .hand-guide-compare').open"), true);
+  assert.equal(await execute("return JSON.parse(localStorage.getItem('wendao:onboarding:v1')).step"), 2, "Hand reference must not advance the lesson");
+  await screenshot('hand-guide-pair');
+  await click('.hand-guide > summary');
   await click("#tutorial-next");
   await until(() => execute("return document.querySelector('#tutorial-step-title').textContent.includes('灵石池') && !document.querySelector('#tutorial-next').disabled"), "beginner progress checkpoint");
   await screenshot("beginner");
@@ -356,6 +363,7 @@ try {
           "cold launch restores hand, wallet and courses",
           "cold launch restores trial seal",
           "beginner guided steps",
+          "nine hand examples and comparisons without advancing the lesson",
           "beginner progress survives native process death",
         ],
         passed: true,

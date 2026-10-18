@@ -22,13 +22,15 @@
 | iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；教学续学、师父面板、试炼和进程终止再启动恢复 XCTest 3 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
 | Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器核心操作与进程恢复通过；实际 Web Audio 开关/后台恢复、精美画质持续帧间隔与真实 DeepSeek 回复已测，详见原生审计 | 长时与低内存回收、实际呈现/触控延迟；真机为额外范围 |
 | macOS | Tauri Apple Silicon App / DMG 可构建 | 实际窗口已复验存档、DeepSeek、音频静音与最小化恢复；精美画质 65.2 秒/6 手牌采样 P95 18 ms；原生文件测试通过 | 长时与完整进程组内存分析、签名公证 |
-| Windows | Tauri x64 NSIS 可构建 | c834c5d 的 Windows CI 实际安装通过，覆盖新进程恢复手牌、灵石、课程、印记与教学步骤；原生文件测试通过 | 用户电脑实际运行、音频与持续性能 |
+| Windows | Tauri x64 NSIS 可构建 | 4dbdf67 的 Windows CI 实际安装版 14 项通过；原生进程恢复、音频开关、最小化恢复和 65 秒/6 手牌连续采样通过，原生文件测试通过 | 用户电脑实际运行、长时与完整进程组内存分析 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件。按用户后续选择，本轮使用模拟器，签名与真机记录保留为额外未验证范围。
 
 ## 最近验证
 
-牌型图鉴增量：教学每一步均可展开，第十步默认展开；保留原十二步索引和存档格式。九组示例牌及皇家同花顺、葫芦优先级、A 低顺、踢脚、花色平等和公共牌平手说明均以规则程序验证。单元 24 项、教学浏览器 12 项及生产构建通过；浏览器覆盖 Chromium 390×844、320×568、桌面与移动 WebKit，验证 45 张示例牌不溢出、底部继续按钮常驻、展开图鉴不改变教学进度和练习钱包。实际截图为 `artifacts/hand-guide-strongest-mobile.png`、`artifacts/hand-guide-pair-small-mobile.png`。这项图鉴尚未重新打包到原生客户端，不能把浏览器验证写成模拟器实测。
+牌型图鉴增量：教学每一步均可展开，第十步默认展开；保留原十二步索引和存档格式。九组示例牌及皇家同花顺、葫芦优先级、A 低顺、踢脚、花色平等和公共牌平手说明均以规则程序验证。单元 24 项、教学浏览器 12 项及生产构建通过；浏览器覆盖 Chromium 390×844、320×568、桌面与移动 WebKit，验证 45 张示例牌不溢出、底部继续按钮常驻、展开图鉴不改变教学进度和练习钱包。随后补齐教学安全区与启动失败重试，相关浏览器 28 项通过，日志为 `artifacts/native-guide-startup-browser.log`。图鉴已纳入新本机 iOS / Android 安装产物：iOS XCTest 3 项通过（运行审计按配置跳过），报告为 `artifacts/ios-native-1792310415021.xcresult`，截图为 `artifacts/ios-guide-safe-area-attachments/747EAC34-3841-4651-B8D4-8B258F58505D.png`；Android 图鉴和比较展开、原生进度隔离与进程恢复通过，主机进程 7607 → 7739，日志为 `artifacts/android-hand-guide.log`。这次还未发布新的六平台同源候选包。
+
+4dbdf67 的云端 [39109218733](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39109218733) 五个平台作业全部成功。Web 单元 24、完整浏览器 76 和离线 6 项通过，另 4 项按项目跳过；Android 构建、macOS 构建与原生文件测试、Windows 正式安装版功能及独立运行验收成功，iOS 常规原生用例通过。这轮尚不包含后续单一窗口入口和教学安全区修正；不能用此成功直接代表后续修改已通过云端。
 
 36c5ebb 的 [39104828591](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39104828591) 中 Web、Android、macOS、Windows 成功；iOS 首次教学点击及一次带存档重启失败，试炼通过、审计项按配置跳过，整轮失败。其本机整轮浏览器 68 项通过、4 项有意跳过，单元 22 项与服务端类型检查通过；iOS 26.5 独立运行审计完成 5 手牌、音频与原生后台恢复，并取得真实 DeepSeek 解读，帧间隔 P95 为 22 ms。Android 硬件图形配置下 65 秒完整动效采样 P95 为 16.8 ms；另一次真实 DeepSeek 联调通过，但保留了 1333.4 ms 长间隔，不能称为全程稳定无卡顿。1 核 / 2 GB 软件渲染的低帧率结果也保留，指标口径、环境及复现命令见 [原生运行验收](NATIVE_AUDIT.md)。
 

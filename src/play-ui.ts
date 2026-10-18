@@ -89,11 +89,13 @@ let learned = loadLearning();
 let completedTrials = loadTrials();
 let resumeActionReadyAt = 0;
 let finishPreparing: () => void;
+let failPreparing: (error: unknown) => void;
 // Module import binds the controls, but Phaser prepares its renderer asynchronously.
-export const practiceReady = new Promise<void>(resolve => { finishPreparing = resolve; });
+export const practiceReady = new Promise<void>((resolve, reject) => { finishPreparing = resolve; failPreparing = reject; });
 const scene = new LiveScene(prefs, {
+  failed: error => failPreparing(error),
   ready: () => {
-    void initialize();
+    void initialize().catch(failPreparing);
   },
   metrics: (fps, p95) => {
     get("fps").textContent =
@@ -114,6 +116,9 @@ const game = new Phaser.Game({
   fps: { target: 60, forceSetTimeOut: false },
   scene,
 });
+// Dispose the failed renderer as well as showing the recovery screen. Scene
+// destruction also releases its audio/lifecycle listeners before a retry.
+void practiceReady.catch(() => { game.destroy(true); });
 
 async function initialize() {
   ready = true;

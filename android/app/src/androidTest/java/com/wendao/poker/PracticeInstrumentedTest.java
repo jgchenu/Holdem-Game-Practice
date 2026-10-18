@@ -57,6 +57,12 @@ public class PracticeInstrumentedTest {
         until("document.querySelector('#tutorial-step-title').textContent.includes('两张底牌') && !document.querySelector('#tutorial-next').disabled");
         js("document.querySelector('#tutorial-hole').click()");
         until("document.querySelector('#tutorial-step-title').textContent.includes('字和图案') && !document.querySelector('#tutorial-next').disabled");
+        js("document.querySelector('.hand-guide > summary').click()");
+        assertEquals("true", js("document.querySelector('.hand-guide').open && document.querySelectorAll('.hand-guide-list > li').length === 9 && document.querySelectorAll('.hand-guide-cards .trial-card').length === 45"));
+        js("document.querySelector('[data-hand-category=\"1\"] .hand-guide-compare > summary').click()");
+        assertEquals("true", js("document.querySelector('[data-hand-category=\"1\"] .hand-guide-compare').open"));
+        assertEquals("{\"step\":2}", instrumentation.getTargetContext().getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:onboarding:v1", null));
+        js("document.querySelector('.hand-guide > summary').click()");
         js("document.querySelector('#tutorial-next').click()");
         until("document.querySelector('#tutorial-step-title').textContent.includes('灵石池') && !document.querySelector('#tutorial-next').disabled");
         assertEquals("{\"step\":3}", instrumentation.getTargetContext().getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE).getString("wendao:onboarding:v1", null));
