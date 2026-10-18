@@ -7,7 +7,7 @@ export function selectProcessGroup(rows, rootPid, profile) {
   assert.ok(rows.some(p => Number(p.ProcessId) === rootPid), 'The app must still exist');
   const owned = new Set([rootPid]);
   const escaped = profile.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const profileArgument = new RegExp(`(?:^|[=\\s"'])${escaped}(?=["'\\s]|$)`,'i');
+  const profileArgument = new RegExp(`(?:^|[=\\s"'])${escaped}(?=["'\\s/\\\\]|$)`,'i');
   const profileRoots = rows.filter(p => /msedgewebview2/i.test(p.Name) && profileArgument.test(p.CommandLine || '')).map(p => Number(p.ProcessId));
   profileRoots.forEach(pid => owned.add(pid));
   let changed;

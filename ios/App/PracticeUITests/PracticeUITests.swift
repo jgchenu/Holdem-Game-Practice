@@ -10,7 +10,7 @@ final class PracticeUITests: XCTestCase {
         app.images.matching(NSPredicate(format: "label CONTAINS %@", "你的底牌")).firstMatch
     }
 
-    private func captureStartup(_ app: XCUIApplication, name: String) {
+    private func captureBootState(_ app: XCUIApplication, name: String) {
         let image = XCTAttachment(screenshot: app.screenshot())
         image.name = name; image.lifetime = .keepAlways; add(image)
         let state = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "BOOTSTATE ")).firstMatch
@@ -18,6 +18,10 @@ final class PracticeUITests: XCTestCase {
             let record = XCTAttachment(data: Data(state.label.utf8), uniformTypeIdentifier: "public.plain-text")
             record.name = name + "-state"; record.lifetime = .keepAlways; add(record)
         }
+    }
+
+    private func captureStartup(_ app: XCUIApplication, name: String) {
+        captureBootState(app, name: name)
         let diagnostic = app.buttons["启动诊断"]
         if diagnostic.exists && diagnostic.isHittable {
             diagnostic.tap()
@@ -27,6 +31,31 @@ final class PracticeUITests: XCTestCase {
                 record.name = name + "-input-trace"; record.lifetime = .keepAlways; add(record)
             }
         }
+    }
+
+    private func requireNativeGeometry(_ app: XCUIApplication) {
+        let window = app.windows.firstMatch
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard window.exists else { return false }
+            let frame = window.frame
+            return frame.minX.isFinite && frame.minY.isFinite && frame.width > 0 && frame.height > 0
+        }, object: nil)
+        let result = XCTWaiter.wait(for: [ready], timeout: 60)
+        if result == .completed { print("Native first window geometry: \(window.frame)") }
+        captureBootState(app, name: result == .completed ? "ios-first-window-geometry" : "ios-invalid-native-window-geometry")
+        XCTAssertEqual(result, .completed, "The first process needs a finite native window before querying hit points")
+    }
+
+    private func requirePracticeStartup(_ app: XCUIApplication, timeout: TimeInterval) {
+        let state = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "BOOTSTATE ")).firstMatch
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard state.exists else { return false }
+            let label = state.label
+            return label.contains("\"phase\":\"ready\"") && label.contains("\"inert\":false")
+        }, object: nil)
+        let result = XCTWaiter.wait(for: [ready], timeout: timeout)
+        captureBootState(app, name: "ios-before-first-guide-tap")
+        XCTAssertEqual(result, .completed, "The first process must finish the real startup; no force-enabling controls")
     }
 
     private func requireActionable(_ element: XCUIElement, timeout: TimeInterval = 20, in app: XCUIApplication? = nil) {
@@ -44,10 +73,12 @@ final class PracticeUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.wendao.poker")
         let coldStart = Date()
         app.launch()
+        let readinessStart = Date()
+        requireNativeGeometry(app)
+        requirePracticeStartup(app, timeout: max(1, 60 - Date().timeIntervalSince(readinessStart)))
         // Exercise the primary first-time-player entry in the first process.
         // Do not tap merely because a WebKit accessibility node has appeared.
         let mentor = app.buttons["新手教学"]
-        requireActionable(mentor, timeout: 60, in: app)
         let learn = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "从零学德州", "复习新手教学")).firstMatch
         // A reused local test simulator may already have a saved practice hand;
         // fresh CI installs exercise the primary entry without clearing saves.
@@ -261,6 +292,35 @@ final class PracticeUITests: XCTestCase {
         auditContains("\"audioStates\":[\"suspended\"]")
         app.switches["开启音效"].tap()
         auditContains("\"audioStates\":[\"running\"]")
+        #if NATIVE_SOAK
+        let initialSample = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(String(sample.label.dropFirst("AUDIT ".count)).utf8)) as? [String: Any])
+        var previousStarts = try XCTUnwrap(initialSample["starts"] as? Int)
+        let continuous = app.buttons["连续牌局验收"]
+        for cycle in 1...15 {
+            requireActionable(continuous)
+            continuous.tap()
+            let began = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false OR enabled == false OR hittable == false"), object: continuous)
+            XCTAssertEqual(XCTWaiter.wait(for: [began], timeout: 10), .completed, "The continuous round must actually start")
+            requireActionable(continuous, timeout: 110)
+            XCTAssertTrue(app.staticTexts["连续验收完成；帧时间是否达标请单独看数据"].exists)
+            let text = String(sample.label.dropFirst("AUDIT ".count))
+            var result = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+            XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["elapsedMs"] as? Int), 65000)
+            XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["frames"] as? Int), 1000)
+            XCTAssertGreaterThanOrEqual(try XCTUnwrap(result["completedHands"] as? Int), 2)
+            let starts = try XCTUnwrap(result["starts"] as? Int)
+            XCTAssertGreaterThan(starts, previousStarts); previousStarts = starts
+            XCTAssertEqual(result["audioStates"] as? [String], ["suspended"])
+            result["cycle"] = cycle
+            let data = try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys])
+            let record = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+            record.name = "ios-soak-round-\(cycle)"; record.lifetime = .keepAlways; add(record)
+            print("IOS_SOAK_ROUND \(String(decoding: data, as: UTF8.self))")
+            // A short pause also gives a host-side process sampler a settled
+            // boundary between rounds. It is outside the frozen frame sample.
+            RunLoop.current.run(until: Date().addingTimeInterval(2))
+        }
+        #else
         app.buttons["重置采样"].tap()
         app.buttons["收起验收"].tap()
         let end = Date().addingTimeInterval(65)
@@ -270,6 +330,7 @@ final class PracticeUITests: XCTestCase {
             else { RunLoop.current.run(until: Date().addingTimeInterval(0.15)) }
         }
         app.switches["关闭音效"].tap()
+        #endif
         auditContains("\"audioStates\":[\"suspended\"]")
         let text = String(sample.label.dropFirst("AUDIT ".count))
         let result = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])

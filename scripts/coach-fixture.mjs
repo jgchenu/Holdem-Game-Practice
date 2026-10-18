@@ -39,6 +39,7 @@ export async function startCoachFixture({ port = 0, timeoutMs = 500 } = {}) {
       }
       if (mode === 'timeout') return; // The real gateway must abort this socket.
       if (mode === 'error') { res.writeHead(503); res.end('fixture upstream unavailable'); return; }
+      if (mode === 'stream-error') { res.writeHead(503); res.write('fixture error body still streaming'); return; }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ choices: [{ message: { content: `${fixtureLabel}：本轮跟注需 ${facts.facts.call} 灵石。这是网络链路测试，不是模型建议。` } }] }));
     } catch {
@@ -57,7 +58,7 @@ export async function startCoachFixture({ port = 0, timeoutMs = 500 } = {}) {
     return {
       url: gatewayUrl + '/api/coach', label: fixtureLabel,
       setNextMode(mode) {
-        if (!['success','error','timeout'].includes(mode)) throw Error('Unknown fixture mode');
+        if (!['success','error','stream-error','timeout'].includes(mode)) throw Error('Unknown fixture mode');
         nextMode = mode;
       },
       report() { return structuredClone({ scope: 'Real loopback HTTP gateway and compatible upstream fixture; not a real model', gatewayRequests, upstreamRequests }); },

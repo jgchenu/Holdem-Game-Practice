@@ -194,7 +194,13 @@ export function createCoachServer(config: CoachConfig) {
           ],
         }),
       });
-      if (!response.ok) throw new Error("upstream");
+      if (!response.ok) {
+        // Even an error body can keep streaming. Release it before clearing
+        // the request timeout; otherwise the completed fallback leaves an
+        // upstream connection alive until the provider closes it.
+        await response.body?.cancel();
+        throw new Error("upstream");
+      }
       const result = await upstreamText(response),
         text = result?.choices?.[0]?.message?.content;
       if (typeof text !== "string" || !text.trim() || text.length > 4_000)

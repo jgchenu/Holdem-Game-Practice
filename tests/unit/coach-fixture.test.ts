@@ -30,3 +30,16 @@ test('原生 HTTP 验收替身使用真实网关，覆盖 CORS、成功、上游
     assert.equal(fixture.report().upstreamRequests.at(-1)?.disconnected,true,'The real gateway timeout must release its upstream connection');
   } finally { await fixture.close(); }
 });
+
+test('上游已返回错误但响应体没有结束时，网关须主动释放连接', async()=>{
+  const fixture=await startCoachFixture({timeoutMs:1000});
+  try{
+    let hand=createHand({names:['你','甲','乙']});while(hand.actor!==0)hand=act(hand,hand.actor!,{type:'call'});
+    fixture.setNextMode('stream-error');
+    const response=await fetch(fixture.url,{method:'POST',headers:{Origin:'http://tauri.localhost','Content-Type':'application/json'},body:JSON.stringify({topic:'price',snapshot:coachSnapshot(observe(hand,0))})});
+    assert.equal(response.status,502);await response.text();
+    const end=Date.now()+500;
+    while(!fixture.report().upstreamRequests[0]?.disconnected&&Date.now()<end)await new Promise(r=>setTimeout(r,10));
+    assert.equal(fixture.report().upstreamRequests[0]?.disconnected,true,'An unread error stream must not outlive the completed gateway response');
+  }finally{await fixture.close();}
+});

@@ -29,7 +29,17 @@ IOS_TEST_DEVICE=<模拟器 UUID> npm run audit:ios
 
 Windows 原生网络验收新增 `WENDAO_COACH_FIXTURE=1`：仅在独立 `desktop-audit` 构建启用回环网关地址，不能与真实模型模式同时开启。测试进程启动真实 `createCoachServer` 与本机兼容上游替身，断言原生页面发出的实际 Origin、HTTP 200 / 502 / 504、成功回复与本地回退、公开信息边界及手牌/钱包保持。回复明确写“兼容接口验收替身（非真实模型）”，不读取 `.env` 或使用 DeepSeek 密钥。替身自身通过本机真实 HTTP 单元检查；Windows 端结果须以新增 CI 的 `coach-transport.json` 和实际截图为准，不能把该替身写成真实模型联调。
 
-Windows CI 现在请求 `WENDAO_SOAK_CYCLES=15`，每轮走实际 65 秒牌局并验证新音频计数，约 16 分钟；本地省略时仍为一轮。每轮结束保存 `soak.json`，失败也保留已经完成的轮次。内存从主进程扩展为递归子进程及本次独立配置目录所属的 WebView2 进程，记录每个 PID 的私有字节和工作集；无关窗口与相似目录会被排除，若进程在两次系统查询之间消失，会记录缺失 PID。主进程必须存在，且采样中必须实际有 WebView2。选择进程的单元检查通过，真实系统采集与长测尚待 Windows CI 执行。
+Windows CI 请求 `WENDAO_SOAK_CYCLES=15`，每轮走实际 65 秒牌局并验证新音频计数；本地省略时仍为一轮。每轮结束保存 `soak.json`，失败也保留已经完成的轮次。内存从主进程扩展为递归子进程及本次独立配置目录所属的 WebView2 进程，记录每个 PID 的私有字节和工作集；无关窗口与相似目录会被排除，若进程在两次系统查询之间消失，会记录缺失 PID。主进程必须存在，且采样中必须实际有 WebView2。682109f 的真实 Windows 系统采集与 15 轮长测已执行，结果见下方；后续目录匹配另补充了 WebView2 子目录边界的单元检查。
+
+## 最新增量：长测与网络资源释放
+
+- **Windows CI / 682109f**：15 轮、98 手牌、1,037,826 ms（约 17.3 分钟），各轮回调 P95 15.7 ms，总最大间隔 31.3 ms，未记录超过 50 ms 的间隔。每次实际采到 8 个进程，没有缺失 PID；进程组私有字节由 390,606,848 增至 466,276,352，第 6–15 轮约 439–445 MiB。后半段有波动范围，不代表没有泄漏。窗口 460×920，精美画质、完整动效，实际 renderer 为 Microsoft Basic Render Driver / D3D11。证据：`artifacts/windows-682109f-run/artifacts/windows-runtime/{runtime,soak}.json`。这是 CI 环境，不是用户 Windows 电脑。
+- 同一 Windows 原生窗口实际经过 HTTP 网关与兼容上游替身，Origin 为 `http://tauri.localhost`；成功 200、上游错误转 502、超时转 504 均通过，预检 204、回退、手牌/钱包保持及超时连接取消也通过。截图与 `coach-transport.json` 在同目录。替身不是 DeepSeek；没有使用服务商密钥。
+- **本机独立 Chromium / 390×844 / DPR 2**：15 轮、99 手牌、985,971 ms（约 16.4 分钟），无页面脚本错误；各轮回调 P95 16.7–16.8 ms。实际 renderer 是 SwiftShader 软件驱动，不能与此前 Metal 浏览器短测混为一谈。自然 GC 下堆使用量有下降也有增长，开始 8,556,316、结束 32,273,672 字节；浏览器进程组 RSS 开始 590,708,736、结束 828,882,944 字节，不能宣称无增长或无泄漏。DOM / listener 数随 GC 回落。记录见 `artifacts/web-soak/report.json` 与首末截图；此轮运行时 HEAD 为 682109f，新增长测脚本当时尚未提交，客户端源码未变。复现：`npx playwright test --config playwright.soak.config.ts`，默认 15 轮，与默认功能测试隔离。
+- **iOS / 682109f 云端失败保留**：常规首个冷启动教学用例失败，另两个功能用例通过，运行审计按配置跳过。失败层级中整棵原生窗口为 `{inf,inf,0,0}`；同一进程视频 105 秒画面已完整显示，BOOTSTATE 为 ready、inert=false、errors=[]。不能归因于页面仍在初始化，也尚未确认唯一根因。原始报告 `artifacts/ios-682109f-run/`，层级 `artifacts/ios-682109f-attachments/09C92BB3-FB55-4D8F-9B6C-27A0586B3B97.txt`，视频帧 `artifacts/ios-682109f-startup-105.png`。新测试在第一进程前连接 Simulator 显示，并先检查原生窗口有效几何，保留首次真实点击断言；本机新设备 3 项通过，`artifacts/ios-native-1792314634125.xcresult`，云端复验仍待执行。没有重试教学点击、强制坐标点击或跳过首次进程。
+- **服务端连接释放修复**：兼容上游若返回错误状态后持续发送未结束的正文，旧网关虽已回退，但连接仍存活。现在在错误路径取消正文，再清理超时。真实回环 HTTP 回归先失败后通过，日志为 `artifacts/coach-error-stream-before.log` / `artifacts/coach-error-stream-after.log`；单元共 27 项及服务端类型检查通过。不是用真实模型制造故障。
+
+iOS 原生 15 轮长测可用专用命名设备运行：`IOS_TEST_DEVICE=<Wendao Soak 开头的专用设备 UUID> node scripts/ios-runtime-soak.mjs`。它只接受单一已启动测试设备，先确认新启动环境中没有 WebKit 进程，再按本设备的 `launchd_sim` 后代采集 App 与 WebKit RSS；不把桌面 Safari/WebKit 或其他模拟器算入。实际结果在 `artifacts/ios-extended-soak/report.json`，仅当 15 轮原生断言全部完成且无采集错误才记通过。RSS 可重复计算共享页，不能称作 iPhone 实际 RAM 或 GPU 显存。长测期间不要并行本机构建或浏览器测试。
 
 内存字段采用 [.NET PrivateMemorySize64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.privatememorysize64) 和 [WorkingSet64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.workingset64) 的字节值；工作集包含共享页面，所以跨进程求和可能重复计算，不能称为独占物理内存或 GPU 显存。进程亲属关系依据 [Win32_Process](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process)。连续采样完成本身不证明没有泄漏，仍需检查预热后的变化和异常；不借此承诺手机帧率。
 

@@ -20,6 +20,8 @@ const env = { ...process.env };
 const audit = ["ios-audit", "android-audit", "desktop-audit"].includes(target);
 const liveAudit = audit && env.WENDAO_LIVE_AI === "1";
 const fixtureAudit = target === "desktop-audit" && env.WENDAO_COACH_FIXTURE === "1";
+const extendedIOSAudit = target === "ios-audit" && env.WENDAO_SOAK_CYCLES === "15";
+if (target === "ios-audit" && env.WENDAO_SOAK_CYCLES && !["1","15"].includes(env.WENDAO_SOAK_CYCLES)) throw new Error("iOS 长测轮数支持 1 或 15。");
 if (liveAudit && fixtureAudit) throw new Error("真实模型和接口替身验收不能同时启用。");
 env.VITE_NATIVE_AUDIT = audit ? "1" : "";
 env.VITE_STARTUP_TRACE = target === "ios-test" ? "1" : "";
@@ -206,6 +208,10 @@ if (target === "android" || target === "android-test" || target === "android-aud
     // Wait for first-boot setup and migrations before XCTest tries to launch
     // the application on a fresh CI simulator.
     run("xcrun", ["simctl", "bootstatus", device.udid, "-b"]);
+    // A booted headless device can render frames while XCTest reports the
+    // whole window at {inf,inf,0,0}. Attach its display before the first app
+    // process; never retry the teaching tap or relaunch to hide that failure.
+    run("open", ["-g", "-a", "Simulator", "--args", "-CurrentDeviceUDID", device.udid]);
     destination = `platform=iOS Simulator,id=${device.udid}`;
   }
   if (signed && !env.APPLE_TEAM_ID)
@@ -228,7 +234,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
     destination,
     "-derivedDataPath",
     derived,
-    ...(audit ? [`SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) NATIVE_AUDIT${liveAudit ? " NATIVE_LIVE_AI" : ""}`, "-only-testing:PracticeUITests/PracticeUITests/testNativeRuntimeAudioAndFrames"] : []),
+    ...(audit ? [`SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) NATIVE_AUDIT${liveAudit ? " NATIVE_LIVE_AI" : ""}${extendedIOSAudit ? " NATIVE_SOAK" : ""}`, "-only-testing:PracticeUITests/PracticeUITests/testNativeRuntimeAudioAndFrames"] : []),
     ...(signed
       ? [
           "CODE_SIGNING_ALLOWED=YES",
