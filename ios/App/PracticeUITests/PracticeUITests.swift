@@ -45,20 +45,19 @@ final class PracticeUITests: XCTestCase {
         // Keep startup diagnostics text-only. A device screenshot request in
         // the first WebKit navigation can itself time out before the first tap.
         // Actual guide screenshots remain after the successful real interaction.
-        captureBootState(app, name: result == .completed ? "ios-first-window-geometry" : "ios-invalid-native-window-geometry")
+        if result != .completed { captureBootState(app, name: "ios-invalid-native-window-geometry") }
         XCTAssertEqual(result, .completed, "The first process needs a finite native window before querying hit points")
     }
 
     private func requirePracticeStartup(_ app: XCUIApplication, timeout: TimeInterval) {
-        let state = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "BOOTSTATE ")).firstMatch
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            guard state.exists else { return false }
-            let label = state.label
-            return label.contains("\"phase\":\"ready\"") && label.contains("\"inert\":false")
-        }, object: nil)
-        let result = XCTWaiter.wait(for: [ready], timeout: timeout)
-        captureBootState(app, name: "ios-before-first-guide-tap")
-        XCTAssertEqual(result, .completed, "The first process must finish the real startup; no force-enabling controls")
+        // One remote query of the compact marker, rather than separate exists
+        // and label snapshots of a multi-kilobyte history on every predicate tick.
+        let state = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@ AND label CONTAINS %@",
+            "BOOTSTATE ", "\"phase\":\"ready\"", "\"inert\":false")).firstMatch
+        let ready = state.waitForExistence(timeout: timeout)
+        if ready { captureBootState(app, name: "ios-before-first-guide-tap") }
+        else { captureStartup(app, name: "ios-startup-not-ready") }
+        XCTAssertTrue(ready, "The first process must finish the real startup; no force-enabling controls")
     }
 
     private func requireActionable(_ element: XCUIElement, timeout: TimeInterval = 20, in app: XCUIApplication? = nil) {

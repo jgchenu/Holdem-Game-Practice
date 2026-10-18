@@ -3,7 +3,7 @@ import { setDiagnosticText } from './diagnostic-text';
 /** Native UI test build only: observe first-touch delivery without retrying it. */
 export function initializeStartupTrace() {
   const events: object[] = [], errors: string[] = [], history: object[] = [];
-  const snapshot = () => ({ atMs: Math.round(performance.now()), phase: document.getElementById('app')?.dataset.bootPhase, detail: document.getElementById('app')?.dataset.bootDetail, inert: document.getElementById('app')?.inert, readyState: document.readyState, focused: document.hasFocus(), hidden: document.hidden, open: [...document.querySelectorAll('dialog[open]')].map(d => d.id), viewport: { width:innerWidth,height:innerHeight,top:visualViewport?.offsetTop,scale:visualViewport?.scale } });
+  const snapshot = () => ({ atMs: Math.round(performance.now()), timeOriginMs: performance.timeOrigin, phase: document.getElementById('app')?.dataset.bootPhase, detail: document.getElementById('app')?.dataset.bootDetail, inert: document.getElementById('app')?.inert, readyState: document.readyState, focused: document.hasFocus(), hidden: document.hidden, open: [...document.querySelectorAll('dialog[open]')].map(d => d.id), viewport: { width:innerWidth,height:innerHeight,top:visualViewport?.offsetTop,scale:visualViewport?.scale } });
   const record = (value: object) => { events.push(value); if (events.length>60) events.shift(); };
   for (const type of ['pointerdown','pointermove','pointerup','pointercancel','touchstart','touchmove','touchend','touchcancel','click','close']) document.addEventListener(type, event => {
     const e = event as MouseEvent, target = event.target as HTMLElement;
@@ -30,11 +30,13 @@ export function initializeStartupTrace() {
       history.push({atMs:current.atMs,stage:current.phase,detail:current.detail,inert:current.inert,hidden:current.hidden,focused:current.focused});
       if(history.length>20)history.shift();
       record({type:'boot-state',...current});
-      setDiagnosticText(stateNode,'BOOTSTATE '+JSON.stringify({...state,history}));
+      // XCTest polls only the two real readiness facts. Keep the full history
+      // out of this always-visible AX label until diagnostics are requested.
+      setDiagnosticText(stateNode,'BOOTSTATE '+JSON.stringify({phase:state.phase,inert:state.inert}));
     }
     if(panel.hidden)return;
     const button=document.getElementById('learn-start'), r=button?.getBoundingClientRect(), styles=button?getComputedStyle(button):null;
-    setDiagnosticText(output,'STARTUP '+JSON.stringify({events,errors,current,inputCapabilities:{hover:matchMedia('(hover: hover)').matches,finePointer:matchMedia('(pointer: fine)').matches,touchPoints:navigator.maxTouchPoints},entry:r?{x:r.x,y:r.y,width:r.width,height:r.height,touchAction:styles?.touchAction,filter:styles?.filter,transform:styles?.transform}:null}));
+    setDiagnosticText(output,'STARTUP '+JSON.stringify({events,errors,history,current,inputCapabilities:{hover:matchMedia('(hover: hover)').matches,finePointer:matchMedia('(pointer: fine)').matches,touchPoints:navigator.maxTouchPoints},entry:r?{x:r.x,y:r.y,width:r.width,height:r.height,touchAction:styles?.touchAction,filter:styles?.filter,transform:styles?.transform}:null}));
   }
   host.querySelector('#startup-trace-open')!.addEventListener('click',()=>{panel.hidden=false;render();});
   host.querySelector('#startup-trace-close')!.addEventListener('click',()=>{panel.hidden=true;});

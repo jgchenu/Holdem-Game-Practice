@@ -168,3 +168,17 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 只读查询处理现在由 `readIosSimulator` 统一负责：仅允许列出可用设备或查询本 App 数据容器；30 秒期限，仅 ETIMEDOUT 可重读一次，两次状态和耗时全部保留。创建、启动、关闭、删除设备与其他 App 查询均不能进入重采路径。冷启动报告在发现设备之前初始化，准备阶段也进入同一失败保存流程。新增清单查询与禁止修改操作的回归后，本机单元 37 项通过；本机实际三套冷启动复验已全部通过，云端仍待新提交验证。
 
 统一查询处理后的三套本机实测：`artifacts/ios-discovery-cold-entry.json`、`artifacts/ios-discovery-three-cold.log`。9 项功能通过、3 项按配置跳过；每套分别取得本轮 6 条原生记录，三台自建设备的关闭与删除均成功。设备发现实际一次读取成功（121 ms），本轮原生读取未发生超时重采；超时恢复的证据仍限于查询替身，不能称为已修复所有云端环境故障。复验后的普通模拟器已重新构建（`artifacts/ios-discovery-ordinary-build.log`），可执行文件及动态库扫描均不含测试记录器（`artifacts/ios-discovery-ordinary-scan.json`）。冷启动报告也保留实际 checkout SHA 与 tree，便于核对 PR 合并提交。
+
+### 43ab4f4：就绪状态的无障碍查询超时
+
+[39133500462](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39133500462) 的 iOS 第一个教学用例在就绪查询阶段失败，尚未点击教学入口；另两项功能通过、1 项按配置跳过。原始 `artifacts/ios-43ab4f4-job.log` 中，对启动 `StaticText` 的读取在测试时刻 59.13 → 117.27 秒与 117.29 → 148.34 秒之间出现长时间阻塞和框架内部查询重试。之后截取的 BOOTSTATE 为 ready、inert=false，页面相对时钟记录 ready 约 44,112 ms；这些不同钟源和事后快照不能单独证明截止时间内的状态，更不能称为手机启动性能通过。
+
+本轮设备发现一次成功（5,491 ms），测试后的原生记录导出一次成功（941 ms），captureSucceeded=true；只读重采未触发。失败并非上两轮的发现/容器查询缺失。PR 合并 checkout `26da1bb0be75accbfbfbed3d50e81653b1fe37c9` 的 tree `9d2526b17e251778b9608bca5ecde9c88912ec7d` 与本机 43ab4f4 相同。原始包、冷启动报告、原生输入记录与测试摘要保存在 `artifacts/ios-43ab4f4-run/` 和 `artifacts/ios-43ab4f4-test-summary.json`。
+
+验收诊断现在默认仅呈现 phase/inert 两个真实字段，完整 history/errors/detail 保留到展开面板；新增 timeOriginMs 以便把页面相对时钟与原生日志对齐。原生就绪等待在同一个远端查询中匹配两个状态字段，省去每轮独立的 exists 与 label 请求，保持相同的 ready 且 inert=false 条件、原 60 秒预算、第一进程与首次点击无重试；窗口尺寸就绪后不再额外查询尚在启动的完整 Web 文本。失败后再采集详细诊断，不将失败重新判为成功。此修改旨在减少测试诊断产生的 AX 开销，尚未证明消除所有云端启动或触摸问题。
+
+短标签回归先在四种浏览器配置失败，再通过；新增锁定状态与完整历史保留检查后，相关浏览器 16 项通过（`artifacts/compact-startup-marker-red.log`、`artifacts/compact-startup-browser.log`）。其中阶段/锁定字段由隔离测试程序变动，用于检验诊断真实性，不代表原生启动或触控实测。三套原生冷启动复验已全部通过：9 项功能通过、3 项按配置跳过，每套取得本轮 6 条记录，关闭与删除三台自建设备均成功（`artifacts/compact-startup-cold-entry.json`、`artifacts/compact-startup-three-cold.log`）。这是本机当前改动的验证，不代替新提交的云端结论。
+
+43ab4f4 同轮 Windows 安装版与原生连续运行通过。`artifacts/windows-43ab4f4-run/summary.json` 及原始 `artifacts/windows-runtime/` 记录 15 个窗口、97 个完成态观测、982,704 ms 采样、62,862 次回调；各轮 P95 15.7 ms，最大 62.6 ms，出现 1 次超过 50 ms 的回调间隔。保留这次间隔，未断言原因或连续零卡顿。15 轮每组 8 进程、计数完整；Private Bytes 388,751,360 → 465,518,592，Working Set 586,735,616 → 409,567,232。没有触发系统查询重采，不判断无泄漏，也不外推 GPU 呈现或手机 FPS。普通 NSIS 已补入 candidate-43ab4f4（6 份产物）；iOS gate 失败使该版本未生成云端普通模拟器包，releaseReady 继续为 false。
+
+紧凑状态标签的实际 iPhone 模拟器截图已检查：`artifacts/compact-startup-native-attachments/1FEA8D87-112D-45E3-9CB5-059D710FDD40.png`。短标签完整可读，教学入口可操作；这是测试构建的诊断浮层，普通包会移除，不将其当作用户产品页面。
