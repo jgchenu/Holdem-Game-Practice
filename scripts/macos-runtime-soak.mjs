@@ -3,6 +3,7 @@ import {spawn,execFileSync} from 'node:child_process';
 import {mkdirSync,readFileSync,writeFileSync,existsSync,openSync,closeSync,unlinkSync,createWriteStream,readdirSync,copyFileSync,rmSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
+import {homedir} from 'node:os';
 import assert from 'node:assert/strict';
 import {collectMacMemory,buildMacMemoryHelper,validateMacSoakRound} from './macos-process-memory.mjs';
 
@@ -37,8 +38,9 @@ try{
  }
  const helper=buildOnly?null:buildMacMemoryHelper();
  if(!buildOnly){
-  // XCTest cannot write the checkout on some macOS hosts. Keep IPC outside it.
-  exchange=join('/private/tmp',`wendao-macos-xctest-${runID}`);mkdirSync(exchange,{mode:0o700});
+  // Xcode's UI-test Runner is sandboxed; only XCTest creates its own container files.
+  exchange=join(homedir(),'Library/Containers/com.wendao.poker.macuitests.xctrunner/Data/tmp',`wendao-macos-xctest-${runID}`);
+  assert.ok(!existsSync(exchange),'A fresh run must not reuse another exchange directory');
   writeFileSync(join(base,'runtime.json'),JSON.stringify({runID,application:app,exchangeDirectory:exchange,mode:renderProbe?'renderer-probe':'soak'})+'\n');
  }
  const resultBundle=join(output,'native.xcresult');report.resultBundle=buildOnly?null:resultBundle;save();
@@ -82,7 +84,7 @@ try{
 }catch(error){report.error=String(error);process.exitCode=1;stop();}
 finally{
  if(child&&!completed)await new Promise(resolve=>child.once('close',resolve));
- if(exchange){
+ if(exchange&&existsSync(exchange)){
   try{
    for(const name of readdirSync(exchange))if(/^(ready|probe|round-\d+)\.json$|^(baseline|round-\d+)\.ack$/.test(name))copyFileSync(join(exchange,name),join(output,name));
   }catch(error){report.passed=false;report.error=String(error);process.exitCode=1;}

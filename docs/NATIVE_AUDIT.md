@@ -234,3 +234,9 @@ CI 额外上传轻量 `macos-diagnostic-reports`（JSON 与 run.log），完整 
 从本轮 xcresult 的 CRC 验证小文件中导出了实际事实附件 `artifacts/macos-146f577-attachments/8ED5BEDE-4FE7-4C66-919E-FE950BB173C4.json`：Apple GPU / WebGL、frame419、页面 hidden=false/focused=true、场景 active/visible、contextLost=false，840×1000 缓冲区有 124207 个非透明采样点、10331 个手牌浅色采样点。前后原生屏幕仍为空白画布，诊断读取图可见；因此帧缓冲非空不构成呈现通过。旧 2d45711 完整归档中的原生录屏第 7 秒也实际查看为空白，不能将问题仅归因于单张截图时机。
 
 新增 audit/dev 专属的三个可恢复显示对照（隔离层 auto、canvas translateZ(0)、同一 canvas 暂移到 body 并保持位置尺寸），仅用于原生截图定位合成边界；不会替换为读取图或 Canvas renderer。连续验收开始前和卸载时恢复原始 DOM/样式。四种浏览器配置的真实操作检查通过，覆盖 320px、390px、移动 WebKit 和桌面，手牌/灵石不变、canvas 父节点及样式恢复；已查看移动基线和对照截图。普通生产 index/assets 17 文件仍与 main13 逐字节相同（`artifacts/macos-compositor-ordinary-parity.json`），原生宏编译通过；Mac 原生对照截图结果待运行。
+
+### d3ceeeb：测试 Runner 的沙箱写入边界
+
+[39151963130](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39151963130) 已结束，普通像素门禁仍失败，独立诊断在 `/private/tmp` 写入时同样返回 Code513。此前把问题局限于项目目录的判断不成立。实际检查本机生成的 Runner 签名权限，确认 `com.apple.security.app-sandbox=true`，仅有外部文件只读例外。现由 XCTest 使用自身 NSHomeDirectory 下的本轮 UUID 目录；宿主严格指向该 Runner 专属容器，归档后清理，不移除沙箱或扩大权限。该协议的云端执行仍待验证。
+
+CI 将 SDK 导出的原生 PNG、事实 JSON 与 manifest 一并上传轻量附件；录像和完整 xcresult 仍在原归档，避免为查看几张对照截图下载整个录像。

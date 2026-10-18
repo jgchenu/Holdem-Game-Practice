@@ -117,10 +117,11 @@ final class PracticeUITests: XCTestCase {
               Bundle(url: owned)?.bundleIdentifier == "com.wendao.poker.soak.desktop" else {
             XCTFail("Only the separate soak bundle may be launched"); return
         }
-        let output = URL(fileURLWithPath: "/private/tmp/wendao-macos-xctest-\(runID)")
+        let output = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("tmp/wendao-macos-xctest-\(runID)")
         guard config["exchangeDirectory"] as? String == output.path else {
-            XCTFail("Only this run's private temporary exchange directory may be used"); return
+            XCTFail("Only this run's directory in the sandboxed Runner home may be used"); return
         }
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         func write(_ name: String, _ value: [String: Any]) throws {
             try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]).write(to: output.appendingPathComponent(name), options: .atomic)
         }

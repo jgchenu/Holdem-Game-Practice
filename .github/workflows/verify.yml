@@ -149,6 +149,13 @@ jobs:
           WENDAO_COACH_FIXTURE: '1'
           WENDAO_SOAK_CYCLES: '15'
         run: node scripts/windows-smoke.mjs
+      - name: Export macOS diagnostic screenshots
+        if: always() && runner.os == 'macOS'
+        run: |
+          for result in artifacts/macos-xctest-soak/*/native.xcresult; do
+            [ -d "$result" ] || continue
+            xcrun xcresulttool export attachments --path "$result" --output-path "${result%/native.xcresult}/attachments"
+          done
       - name: Upload compact macOS diagnostic reports
         if: always() && runner.os == 'macOS'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -160,6 +167,8 @@ jobs:
             artifacts/macos-xctest-soak/*/report.json
             artifacts/macos-xctest-soak/*/probe.json
             artifacts/macos-xctest-soak/*/run.log
+            artifacts/macos-xctest-soak/*/attachments/*.png
+            artifacts/macos-xctest-soak/*/attachments/*.json
           retention-days: 14
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
