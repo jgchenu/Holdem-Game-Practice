@@ -25,7 +25,7 @@
 | Web | 13cf180 生产候选已归档 | 云端浏览器 108 项通过、4 项按平台跳过，离线 6 项、单元 37 项通过；历史 15 轮保留原版本范围 | 主屏幕安装、真机硬件与 GPU/触控专项未测；有限采样不证明无泄漏 |
 | iOS | 13cf180 普通模拟器与未签名设备包齐备 | 实际安装普通包首点教学 1 项通过；三台独立冷启动共 9 项功能通过、3 项跳过，每套 6 条本轮原生记录；四台设备关闭/删除均成功 | 历史音频/生命周期/15 轮按原版本保留；签名与手机硬件为额外未测范围 |
 | Android | 13cf180 API 36 / JDK 21 调试 APK，CI 与签名检查通过 | a36ad0b 本机 API34 复核普通包 1 项通过、3 项专项跳过；四次可信触控，强制重启两阶段各通过；17 个前端资源及 Android 工程输入与 main13 相同。历史 15 轮与真实 DeepSeek 保留原版本范围 | 当前 APK 未冒称真机验证；硬件、低内存系统回收、GPU 呈现与触控延迟专项未测 |
-| macOS | 13cf180 CI App/DMG、Rust 4 项及原生入口检查通过 | 普通首次教学/实际手牌状态 1 项通过；DMG 文件与 CI 原生测试副本相同。本机游戏可绘出桌面与卡牌。a36ad0b 独立帧缓冲采集 1 项通过 | 普通 CI 原生截图卡牌像素仍为 0；缓冲区非空不能代替窗口呈现。f012149 确认面板收起后三种合成对照仍无牌面，基础 DOM/2D/WebGL 对照待原生采集。完整新 15 轮待解锁/开发工具认证；旧 10 轮为中断结果。签名公证未做 |
+| macOS | 13cf180 CI App/DMG、Rust 4 项及原生入口检查通过 | 普通首次教学/实际手牌状态 1 项通过；DMG 文件与 CI 原生测试副本相同。本机游戏可绘出桌面与卡牌。a36ad0b 独立帧缓冲采集 1 项通过 | 普通 CI 原生截图卡牌像素仍为 0；缓冲区非空不能代替窗口呈现。基础 DOM/2D 可见、两种简单 WebGL 均未出现在云端截图；d3d9455 的独立 ScreenCaptureKit 路径无现成授权，未捕获。完整新 15 轮待解锁/开发工具认证；旧 10 轮为中断结果。签名公证未做 |
 | Windows | 13cf180 普通 NSIS、安装版原生检查与连续运行通过 | 15 个窗口 / 981153 ms / 98 个完成态观测，全部 8 进程计数完整；P95 15.7 ms，最大 31.3 ms，超过 50 ms 间隔为 0，无系统查询重采 | Microsoft Basic Render Driver / D3D11 环境，不外推 GPU 呈现、手机 FPS 或无泄漏；用户电脑和真实 Windows DeepSeek 未测 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件。按用户后续选择，本轮使用模拟器，签名与真机记录保留为额外未验证范围。
@@ -36,7 +36,7 @@
 
 `artifacts/packages/candidate-13cf180/` 有七份产物及 SHA256SUMS：Web、源码、Android APK、实际安装并通过首点测试的 iOS 模拟器 App、未签名 iOS 设备 App、Mac DMG、Windows NSIS。四类普通客户端的 17 个页面/资源相同；ZIP/APK 共 938 个文件做精确凭据值和普通包诊断标记字节扫描，未发现匹配，不能称为解码所有二进制嵌入数据。Mac DMG 只读挂载后 3 个 App 文件与 CI 原生实测副本相同，已卸载；APK 签名、iOS 平台和可执行权限验证通过。Windows EXE 未在本机展开，保留 CI 实际安装验证范围。`releaseReady=false`，代码合并不等于所有验收完成。
 
-Mac 专项的新像素门禁在 7ca5749 复现失败：`artifacts/macos-7ca5749-job.log` 与 `artifacts/macos-7ca5749-attachments/EB9ED454-09CD-46BE-96E9-D553596301B6.png` 确认手牌文字已存在，但原生截图继续读取约 20 秒仍无卡牌像素。显式 App 置前（f73cb5c）的 [Mac 专项](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39147349513) 同样失败。a36ad0b 已通过独立报告采集，取得 Apple GPU / WebGL、场景运行与非空手牌缓冲区，原生读取仍为 0；该次合成对照截图被验收面板覆盖，不能判断方案有效或无效。f012149 关闭检查通过，无遮挡原生截图中的三种合成对照仍没有牌面；下一轮以独立的 DOM/2D/WebGL 色块区分基础显示路径。Mac 专项不代表其他平台重新通过，详见 [原生验收记录](NATIVE_AUDIT.md)。
+Mac 专项的新像素门禁在 7ca5749 复现失败：`artifacts/macos-7ca5749-job.log` 与 `artifacts/macos-7ca5749-attachments/EB9ED454-09CD-46BE-96E9-D553596301B6.png` 确认手牌文字已存在，但原生截图继续读取约 20 秒仍无卡牌像素。显式 App 置前（f73cb5c）的 [Mac 专项](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39147349513) 同样失败。a36ad0b 已通过独立报告采集，取得 Apple GPU / WebGL、场景运行与非空手牌缓冲区，原生读取仍为 0；该次合成对照截图被验收面板覆盖，不能判断方案有效或无效。f012149 关闭检查通过，无遮挡原生截图中的三种合成对照仍没有牌面；f1e2368/d3d9455 的基础对照中 DOM/2D 可见、两种简单 WebGL 均不可见，但缓冲区读取正常。另一路 ScreenCaptureKit 无现成授权，未捕获。本机重新核对仍锁屏，需要手动解锁并完成开发工具认证后继续可靠呈现与完整15轮验收。Mac 专项不代表其他平台重新通过，详见 [原生验收记录](NATIVE_AUDIT.md)。
 
 Android 当前普通包功能复核原始证据位于 `artifacts/android-a36ad0b-validation/`：XML 为 1 pass / 3 skip / 0 fail，宿主强制停止后 PID5935 消失、新 PID6041 恢复同一手牌、灵石、课程、试炼与教学步骤。该轮开始前保留了旧结果，结束后关闭自己启动的 Pixel_7 模拟器。首入口等四次操作有真实可信触控；教学内容核对也使用 DOM 操作，不把整套用例称为全手势或性能验收。
 

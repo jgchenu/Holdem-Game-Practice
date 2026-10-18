@@ -266,3 +266,9 @@ CI 将 SDK 导出的原生 PNG、事实 JSON 与 manifest 一并上传轻量附�
 [39154937875](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39154937875) 已结束：普通像素门禁失败、独立采集1项通过。实际查看 `artifacts/macos-f1e2368-compact/macos-xctest-soak/8e56c338-613e-4654-8a86-5cbf41078a19/attachments/6E26616A-52D2-4841-8D60-6A8D1C14A270.png`：DOM 和 Canvas2D 绿色/白色方块可见；默认与 preserveDrawingBuffer=true 的两个简单 WebGL 方块均不可见。probe.json 中三种画布的中心实际读取均为255,255,255,255，两种 WebGL 上下文创建成功、保留属性分别为false/true。因此问题不局限于 Phaser 或牌桌祖先布局；保留缓冲区也未使此原生截图出现 WebGL。不能仅据此断言物理显示器实际没有呈现。
 
 下一轮只增加测试端的 [ScreenCaptureKit 窗口截图](https://developer.apple.com/documentation/ScreenCaptureKit/SCScreenshotManager/captureImage(contentFilter:configuration:completionHandler:)) 对照：先观察已有录屏授权，未授权则只记录 authorized=false，不请求授权或修改权限。授权存在时，按独立 App 的精确 bundle URL、唯一 PID、bundle identifier 和主窗口筛选，仅截取本次长测 App 自己的窗口。结果和错误保存在 probe.json 的 screenCaptureKit 字段，成功图片作为 XCTest 附件；不替代普通像素门禁或长测。SDK 宏编译通过（`artifacts/macos-composited-capture-build.log`），实际授权与捕获结果待云端验证。
+
+### d3d9455：云端捕获无授权，本机仍需解锁与系统认证
+
+[39156035081](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39156035081) 已结束：普通像素门禁仍失败，独立采集1项通过。`artifacts/macos-d3d9455-compact/macos-xctest-soak/36e84ce1-b194-4198-a2d5-d5b88eee2162/probe.json` 明确记录 screenCaptureKit.authorized=false、captured=false；未触发授权请求，未生成该路径的窗口图。实际查看同目录附件 `C3F0FD63-94F1-4278-AB53-A42DB2E6399E.png`，DOM/2D可见、两种WebGL仍不可见。故目前只能确认云端 XCTest 图像的 WebGL 缺失，不能据此宣称所有 Mac 的实际屏幕均黑屏，也不能改用帧缓冲图代替呈现验收。
+
+2026-10-18 19:05 UTC 后重新只读核对本机：IOConsoleLocked=Yes，原用户审计 App PID40880、独立旧长测 App PID9077 仍运行；原审计二进制 SHA256 仍为26304ec25795125aa624523c9b51d9b925a0b7a349f4a58ec74a03974a561cda。之前本机 XCTest 初始化的系统认证取消日志仍保留于 `artifacts/macos-xctest-soak/2c47bc5f-e105-40cc-b345-c6a899950d25/run.log`，没有新的有效本机轮次。锁屏/认证条件已跨多轮持续出现；云端现有获准采集路径不能补齐可靠呈现证据。下一步需要用户手动解锁，并完成出现的 Xcode／开发工具系统认证，再继续检查独立 App 的真实画面、可靠捕获与完整15轮。不会修改系统安全设置，不会动原用户审计 App；也不把重复云端构建作为新增验证。
