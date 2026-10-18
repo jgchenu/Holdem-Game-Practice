@@ -47,6 +47,7 @@ public class PracticeInstrumentedTest {
             if ("true".equals(js("Boolean(" + predicate + ")"))) return;
             Thread.sleep(60);
         }
+        System.out.println("WENDAO_NATIVE_FAILURE " + js("JSON.stringify({touch:window.__nativeTouch,events:window.__nativeTouchEvents,viewport:[innerWidth,innerHeight,devicePixelRatio,visualViewport?.offsetTop],inert:document.querySelector('#app')?.inert,dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.id)})"));
         fail("Native WebView condition timed out: " + predicate);
     }
 
@@ -58,7 +59,7 @@ public class PracticeInstrumentedTest {
     private void tap(String selector) throws Exception {
         String quoted = org.json.JSONObject.quote(selector);
         until("!document.querySelector('#app').inert && (()=>{const b=document.querySelector(" + quoted + ");return b && !b.disabled})()");
-        js("window.__nativeTouch=null;if(!window.__nativeTouchTracking){document.addEventListener('click',e=>{window.__nativeTouch={trusted:e.isTrusted,target:e.target.closest('button')?.id}},true);window.__nativeTouchTracking=true}");
+        js("window.__nativeTouch=null;window.__nativeTouchEvents=[];if(!window.__nativeTouchTracking){for(const type of ['pointerdown','pointerup','pointercancel','click'])document.addEventListener(type,e=>{const b=e.target.closest('button');const entry={type,trusted:e.isTrusted,target:b?.id||b?.className||e.target.tagName,x:e.clientX,y:e.clientY,at:performance.now()};window.__nativeTouchEvents.push(entry);if(window.__nativeTouchEvents.length>20)window.__nativeTouchEvents.shift();if(type==='click')window.__nativeTouch={trusted:e.isTrusted,target:b?.id}},true);window.__nativeTouchTracking=true}");
         JSONArray box = new JSONArray(js("(()=>{const r=document.querySelector(" + quoted + ").getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2,innerWidth,innerHeight]})()"));
         double x = box.getDouble(0), y = box.getDouble(1), width = box.getDouble(2), height = box.getDouble(3);
         assertTrue("Touch target must already be in the visible viewport", x > 0 && x < width && y > 0 && y < height);
@@ -72,12 +73,16 @@ public class PracticeInstrumentedTest {
         long down = SystemClock.uptimeMillis();
         MotionEvent press = MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, screenX, screenY, 0);
         press.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-        try { instrumentation.sendPointerSync(press); } finally { press.recycle(); }
+        // Queue both hardware events independently of WebView event handling.
+        // sendPointerSync can block after DOWN and turn a short tap into a
+        // long press on a busy/software-rendered emulator.
+        try { assertTrue(instrumentation.getUiAutomation().injectInputEvent(press, false)); } finally { press.recycle(); }
         SystemClock.sleep(60);
         MotionEvent release = MotionEvent.obtain(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, screenX, screenY, 0);
         release.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-        try { instrumentation.sendPointerSync(release); } finally { release.recycle(); }
+        try { assertTrue(instrumentation.getUiAutomation().injectInputEvent(release, false)); } finally { release.recycle(); }
         instrumentation.waitForIdleSync();
+        System.out.println("WENDAO_NATIVE_TOUCH " + quoted + " " + js("JSON.stringify({touch:window.__nativeTouch,events:window.__nativeTouchEvents,rect:(()=>{const r=document.querySelector(" + quoted + ").getBoundingClientRect();return [r.x,r.y,r.width,r.height]})(),viewport:[innerWidth,innerHeight,devicePixelRatio,visualViewport?.offsetTop]})"));
     }
 
     private void learnBeginnerSteps() throws Exception {
