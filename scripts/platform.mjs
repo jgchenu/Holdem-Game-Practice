@@ -19,11 +19,13 @@ const target = process.argv[2];
 const env = { ...process.env };
 const audit = ["ios-audit", "android-audit", "desktop-audit"].includes(target);
 const liveAudit = audit && env.WENDAO_LIVE_AI === "1";
+const fixtureAudit = target === "desktop-audit" && env.WENDAO_COACH_FIXTURE === "1";
+if (liveAudit && fixtureAudit) throw new Error("真实模型和接口替身验收不能同时启用。");
 env.VITE_NATIVE_AUDIT = audit ? "1" : "";
 env.VITE_STARTUP_TRACE = target === "ios-test" ? "1" : "";
 // Native test runs never contact a configured, billable mentor service.
 if (target === "ios-test" || target === "android-test" || audit)
-  env.VITE_COACH_URL = liveAudit ? "http://127.0.0.1:8787/api/coach" : "";
+  env.VITE_COACH_URL = liveAudit || fixtureAudit ? "http://127.0.0.1:8787/api/coach" : "";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 const packages = join(root, "artifacts", "packages");

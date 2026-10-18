@@ -113,11 +113,15 @@ jobs:
         run: node scripts/windows-smoke.mjs
       - name: Build isolated Windows runtime audit
         if: runner.os == 'Windows'
+        env:
+          WENDAO_COACH_FIXTURE: '1'
         run: npm run build:desktop-audit
       - name: Verify native Windows audio, minimize and continuous frames
         if: runner.os == 'Windows'
         env:
           WENDAO_RUNTIME_AUDIT: '1'
+          WENDAO_COACH_FIXTURE: '1'
+          WENDAO_SOAK_CYCLES: '15'
         run: node scripts/windows-smoke.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

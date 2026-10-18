@@ -36,3 +36,4 @@
 - iOS 原生联调：iOS 26.5 模拟器的真实师父面板取得模型解读，XCTest 原生断言通过，日志为 `artifacts/ios-deepseek-native-background.log`；同轮原生音频、后台恢复与持续动画数据见 `artifacts/ios-audit-1792305846978.xcresult`。本机回环请求未额外放开 ATS。
 - macOS 原生联调：独立验收客户端 `tauri://localhost` 实际取得模型解读，解释跟注 20 / 跟注后可竞争 90 / 价格 22.2%；请教前后灵石均为 1000，来自 CUA 实际窗口观察，记录在 `artifacts/macos-native-runtime-observation.json`。
 - 新手表达：真实回复曾把内部字段名带入说明，已补充零基础表达要求，先说明当前选择、不展示字段名或空值。实际免费过牌场景复测 HTTP 200、1585 ms，回复未带内部字段名；见 `artifacts/deepseek-beginner-language.json`。这是单次样本，不保证模型每次表达都正确。
+- Windows 原生传输检查已接入独立验收 CI：真实 WebView2 请求真实本机 HTTP 网关，由明确标识的兼容接口替身返回数据，覆盖成功、上游错误和超时。测试不读取供应商环境变量或密钥；本机替身 HTTP 单元验证通过，Windows 实跑待确认。这是传输、CORS 与回退的检查，不能当成 Windows 已调用真实 DeepSeek。

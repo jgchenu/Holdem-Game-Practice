@@ -27,6 +27,12 @@ IOS_TEST_DEVICE=<模拟器 UUID> npm run audit:ios
 
 ## 指标含义
 
+Windows 原生网络验收新增 `WENDAO_COACH_FIXTURE=1`：仅在独立 `desktop-audit` 构建启用回环网关地址，不能与真实模型模式同时开启。测试进程启动真实 `createCoachServer` 与本机兼容上游替身，断言原生页面发出的实际 Origin、HTTP 200 / 502 / 504、成功回复与本地回退、公开信息边界及手牌/钱包保持。回复明确写“兼容接口验收替身（非真实模型）”，不读取 `.env` 或使用 DeepSeek 密钥。替身自身通过本机真实 HTTP 单元检查；Windows 端结果须以新增 CI 的 `coach-transport.json` 和实际截图为准，不能把该替身写成真实模型联调。
+
+Windows CI 现在请求 `WENDAO_SOAK_CYCLES=15`，每轮走实际 65 秒牌局并验证新音频计数，约 16 分钟；本地省略时仍为一轮。每轮结束保存 `soak.json`，失败也保留已经完成的轮次。内存从主进程扩展为递归子进程及本次独立配置目录所属的 WebView2 进程，记录每个 PID 的私有字节和工作集；无关窗口与相似目录会被排除，若进程在两次系统查询之间消失，会记录缺失 PID。主进程必须存在，且采样中必须实际有 WebView2。选择进程的单元检查通过，真实系统采集与长测尚待 Windows CI 执行。
+
+内存字段采用 [.NET PrivateMemorySize64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.privatememorysize64) 和 [WorkingSet64](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.workingset64) 的字节值；工作集包含共享页面，所以跨进程求和可能重复计算，不能称为独占物理内存或 GPU 显存。进程亲属关系依据 [Win32_Process](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process)。连续采样完成本身不证明没有泄漏，仍需检查预热后的变化和异常；不借此承诺手机帧率。
+
 `p50Ms` / `p95Ms` / `p99Ms` 是可见页面的 `requestAnimationFrame` 间隔；`busyP95Ms` 只统计牌局动效进行中的样本。切后台时重置相邻帧时间，避免将后台停留算成动画卡顿。记录实际 WebGL renderer、画布尺寸、像素比和 CPU 并发数，不能只根据模拟器启动日志判断硬件加速。
 
 音频状态和振荡器开始/停止次数来自实际 AudioContext。Android 内存值为 App 主进程 PSS，不包含独立 WebView renderer；短时前后差值不能用来认定无内存泄漏。

@@ -3,10 +3,13 @@ import { spawn, execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, join } from "node:path";
 import assert from "node:assert/strict";
+import { collectWindowsMemory } from './windows-process-memory.mjs';
 
 if (process.platform !== "win32")
   throw new Error("This native smoke test requires Windows.");
 const runtimeAudit = process.env.WENDAO_RUNTIME_AUDIT === "1";
+const soakCycles = Number(process.env.WENDAO_SOAK_CYCLES || 1);
+assert.ok(Number.isInteger(soakCycles) && soakCycles>=1 && soakCycles<=30,'Soak cycles must be 1..30');
 const application =
   runtimeAudit ? resolve("src-tauri/target/release/app.exe") : process.env.TAURI_SMOKE_APP || resolve("src-tauri/target/release/app.exe");
 if (!existsSync(application))
@@ -36,6 +39,7 @@ bridge.on("error", (error) => {
 });
 let session;
 let appProcess;
+let coachFixture;
 async function command(
   path,
   body,
@@ -155,6 +159,42 @@ async function launchNative() {
   );
   assert.equal(await execute("return '__TAURI_INTERNALS__' in window"), true, "The session must target the native Tauri client");
 }
+async function verifyCoachTransport(state) {
+  const before = await state();
+  await click('#coach-open');
+  await until(() => execute("return document.querySelector('#coach-dialog').open"), 'native mentor opens');
+  const nativeOrigin = await execute('return location.origin');
+  const checks = [];
+  for (const [mode,topic,status] of [['success','price',200],['error','review',502],['timeout','situation',504]]) {
+    coachFixture.setNextMode(mode);
+    const count = coachFixture.report().gatewayRequests.filter(r => r.method==='POST').length;
+    await click(`[data-coach-topic="${topic}"]`);
+    await until(() => {
+      const posts = coachFixture.report().gatewayRequests.filter(r => r.method==='POST');
+      return posts.length === count+1 && posts.at(-1).status === status;
+    }, `real native HTTP ${mode}`);
+    await until(() => execute(`return document.querySelector('#coach-source').textContent.includes(${JSON.stringify(mode==='success'?'AI 解读':'AI 暂不可用')})`), `native mentor ${mode} response`);
+    const reply = await execute("return document.querySelector('#coach-reply').textContent");
+    assert.equal(reply.includes('fixture-server-only'),false,'Server credential must not reach client');
+    assert.equal(reply.includes(coachFixture.label),mode==='success','Fixture success and real local fallback must differ');
+    assert.ok(reply.length>0);
+    assert.deepEqual(await state(),before,'Mentor transport must preserve the hand and wallet');
+    checks.push({mode,status,source:await execute("return document.querySelector('#coach-source').textContent")});
+    await screenshot(`coach-transport-${mode}`);
+  }
+  const observed = coachFixture.report();
+  const posts = observed.gatewayRequests.filter(r => r.method==='POST');
+  assert.equal(posts.length,3);
+  assert.ok(posts.every(r => r.origin===nativeOrigin),'Native origin must actually traverse CORS');
+  assert.ok(observed.upstreamRequests.every(r => r.playersHaveNoPrivateCards && r.serverCredentialPresent));
+  await until(() => coachFixture.report().upstreamRequests.at(-1).disconnected,'timed-out upstream socket closes');
+  const result = {passed:true,nativeOrigin,checks,...observed};
+  writeFileSync(join(output,'coach-transport.json'),JSON.stringify(result,null,2));
+  await click('#coach-dialog .close-button');
+  await click('#resume');
+  await until(() => execute("return !document.querySelector('#call').disabled"),'continue after mentor');
+  return result;
+}
 async function verifyRuntime() {
   await until(() => execute("return !!window.__wendaoAudit"), "explicit native audit build");
   assert.deepEqual(await execute("return window.__wendaoAudit.report().audioStates"), [], "Audio must be lazy");
@@ -163,6 +203,7 @@ async function verifyRuntime() {
   await click('#start'); await idle();
   await until(() => execute("return !document.querySelector('#call').disabled"), "hero turn before minimizing");
   const state = () => execute("return {hand:document.querySelector('#live-table').getAttribute('aria-label'),wallet:document.querySelector('#wallet').textContent}");
+  const coachTransport = coachFixture ? await verifyCoachTransport(state) : null;
   const before = await state();
   await command(`/session/${session}/window/minimize`, {});
   await until(() => execute("return window.__wendaoAudit.report().hidden>0 && window.__wendaoAudit.report().audioStates.includes('suspended')"), "native minimize suspends audio");
@@ -173,21 +214,40 @@ async function verifyRuntime() {
   await until(() => execute("return window.__wendaoAudit.report().audioStates.includes('running')"), "explicit continue resumes audio");
   await click('#sound');
   await until(() => execute("return window.__wendaoAudit.report().audioStates.includes('suspended')"), "mute suspends real context");
-  const memory = () => JSON.parse(execFileSync('powershell.exe',['-NoProfile','-Command',`Get-Process -Id ${appProcess.pid} | Select-Object WorkingSet64,PrivateMemorySize64 | ConvertTo-Json -Compress`],{encoding:'utf8',timeout:10_000}));
-  const memoryBefore = memory();
-  await click('#audit-open'); await click('#audit-run');
-  await until(() => execute("return ['complete','failed'].includes(document.querySelector('#audit-status').dataset.phase)"), "65 second real game audit", 110_000, 750);
-  const status = await execute("return {phase:document.querySelector('#audit-status').dataset.phase,text:document.querySelector('#audit-status').textContent}");
-  const measurements = await execute("return JSON.parse(document.querySelector('#audit-report').textContent.slice(6))");
-  const result = {passed:status.phase==='complete',application,scope:'native Windows WebView2 audit binary; installed production client tested separately',status,measurements,memory:{before:memoryBefore,after:memory(),scope:'Tauri app process; excludes WebView2 child processes; not a leak verdict'}};
+  const memory = () => collectWindowsMemory(appProcess.pid,testProfile);
+  const memoryBefore = memory(), rounds = [];
+  const started = Date.now();
+  let status, measurements;
+  let previousStarts = await execute('return window.__wendaoAudit.report().starts');
+  for(let cycle=1;cycle<=soakCycles;cycle++) {
+    if(await execute("return document.querySelector('#audit-panel').hidden")) await click('#audit-open');
+    await click('#audit-run');
+    await until(() => execute("return document.querySelector('#audit-status').dataset.phase==='running'"),`soak round ${cycle} starts`);
+    await until(() => execute("return ['complete','failed'].includes(document.querySelector('#audit-status').dataset.phase)"), `soak round ${cycle} completes`, 110_000, 750);
+    status = await execute("return {phase:document.querySelector('#audit-status').dataset.phase,text:document.querySelector('#audit-status').textContent}");
+    measurements = await execute("return JSON.parse(document.querySelector('#audit-report').textContent.slice(6))");
+    rounds.push({cycle,status,measurements,memory:memory()});
+    // Preserve completed rounds even when a later round fails or the job ends.
+    writeFileSync(join(output,'soak.json'),JSON.stringify({requestedCycles:soakCycles,completedCycles:rounds.length,elapsedMs:Date.now()-started,memoryBefore,rounds},null,2));
+    assert.equal(status.phase,'complete',status.text);
+    assert.ok(measurements.elapsedMs>=65_000 && measurements.frames>=1000 && measurements.completedHands>=2);
+    assert.ok(measurements.starts>previousStarts,'Each round must actually generate sound, not reuse earlier counters');
+    previousStarts=measurements.starts;
+    assert.deepEqual(measurements.audioStates,['suspended']);
+    console.log(`Native soak round ${cycle}/${soakCycles}: ${measurements.completedHands} hands, callback P95 ${measurements.p95Ms}ms, ${rounds.at(-1).memory.processes.length} processes, private ${rounds.at(-1).memory.privateBytesSum} bytes`);
+  }
+  const result = {passed:true,application,scope:'native Windows WebView2 audit binary; installed production client tested separately',status,measurements,coachTransport,
+    soak:{requestedCycles:soakCycles,completedCycles:rounds.length,elapsedMs:Date.now()-started,totalHands:rounds.reduce((n,r)=>n+r.measurements.completedHands,0),rounds},
+    memory:{before:memoryBefore,after:rounds.at(-1).memory,scope:memoryBefore.scope}};
   writeFileSync(join(output,'runtime.json'),JSON.stringify(result,null,2));
   await screenshot('continuous-runtime');
-  assert.equal(status.phase,'complete',status.text);
-  assert.ok(measurements.elapsedMs>=65_000 && measurements.frames>=1000 && measurements.completedHands>=2);
-  assert.deepEqual(measurements.audioStates,['suspended']);
   writeFileSync(join(output,'result.json'),JSON.stringify(result,null,2));
 }
 try {
+  if (runtimeAudit && process.env.WENDAO_COACH_FIXTURE === '1') {
+    const {startCoachFixture} = await import('./coach-fixture.mjs');
+    coachFixture = await startCoachFixture({port:8787});
+  }
   await until(async () => { await command("/status"); return true; }, "Tauri driver starts");
   await launchNative();
   if (runtimeAudit) {
@@ -397,4 +457,8 @@ try {
     } catch { appProcess.kill(); }
   }
   writeFileSync(join(output, "driver.log"), logs);
+  if (coachFixture) {
+    writeFileSync(join(output,'coach-fixture-observations.json'),JSON.stringify(coachFixture.report(),null,2));
+    await coachFixture.close();
+  }
 }
