@@ -9,6 +9,15 @@ final class PracticeUITests: XCTestCase {
         app.buttons.matching(NSPredicate(format: "title CONTAINS %@ OR label CONTAINS %@", text, text)).firstMatch
     }
 
+    // Some macOS static-text values are numbers, so string operators need a cast.
+    private func diagnosticPredicate(_ text: String) -> NSPredicate {
+        NSPredicate(format: "CAST(value, 'NSString') CONTAINS %@ OR label CONTAINS %@ OR title CONTAINS %@", text, text, text)
+    }
+
+    private func diagnosticText(_ app: XCUIApplication, containing text: String) -> XCUIElement {
+        app.staticTexts.matching(diagnosticPredicate(text)).firstMatch
+    }
+
     // Check actual captured card pixels, separately from the canvas accessibility label.
     private func lightCardPixels(_ bitmap: NSBitmapImageRep) -> Int {
         var count = 0
@@ -86,6 +95,16 @@ final class PracticeUITests: XCTestCase {
     func testIsolatedRuntimeSoak() throws {
         #if MAC_SOAK
         continueAfterFailure = false
+        let predicate = diagnosticPredicate("DIAG_CHECK ")
+        let fixtures: [(NSDictionary, Bool)] = [
+            (["value": 1, "label": "", "title": ""], false),
+            (["value": NSNull(), "label": "", "title": ""], false),
+            (["label": "", "title": ""], false),
+            (["value": "DIAG_CHECK {}", "label": "", "title": ""], true),
+            (["value": 1, "label": "DIAG_CHECK {}", "title": ""], true),
+            (["value": 1, "label": "", "title": "DIAG_CHECK {}"], true)
+        ]
+        for (value, expected) in fixtures { XCTAssertEqual(predicate.evaluate(with: value), expected) }
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         let configFile = root.appendingPathComponent("artifacts/macos-xctest-soak/runtime.json")
         let config = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: configFile)) as? [String: Any])
@@ -141,11 +160,11 @@ final class PracticeUITests: XCTestCase {
             open.click()
             let probe = button(app, containing: "检查画布渲染")
             XCTAssertTrue(probe.waitForExistence(timeout: 20)); probe.click()
-            let state = app.staticTexts.matching(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "DRAWSTATE ", "DRAWSTATE ")).firstMatch
+            let state = diagnosticText(app, containing: "DRAWSTATE ")
             let observed = state.waitForExistence(timeout: 20)
             if !observed { print(app.debugDescription) }
             XCTAssertTrue(observed)
-            let text = [state.value as? String, state.label].compactMap { $0 }.first { $0.contains("DRAWSTATE ") }
+            let text = [state.value as? String, state.label, state.title].compactMap { $0 }.first { $0.contains("DRAWSTATE ") }
             let start = try XCTUnwrap(text?.range(of: "DRAWSTATE ")?.upperBound)
             let suffix = try XCTUnwrap(text).suffix(from: start)
             let end = try XCTUnwrap(suffix.firstIndex(of: "}"))
@@ -179,10 +198,10 @@ final class PracticeUITests: XCTestCase {
             XCTAssertEqual(XCTWaiter.wait(for: [began], timeout: 10), .completed, "Round must actually begin")
             let finished = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND hittable == true"), object: continuous)
             XCTAssertEqual(XCTWaiter.wait(for: [finished], timeout: 110), .completed)
-            let status = app.staticTexts.matching(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "连续验收完成", "连续验收完成")).firstMatch
+            let status = diagnosticText(app, containing: "连续验收完成")
             XCTAssertTrue(status.exists, "A stopped or hidden round must never pass")
-            let summary = app.staticTexts.matching(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "MEASURE ", "MEASURE ")).firstMatch
-            let text = [summary.value as? String, summary.label].compactMap { $0 }.first { $0.contains("MEASURE ") }
+            let summary = diagnosticText(app, containing: "MEASURE ")
+            let text = [summary.value as? String, summary.label, summary.title].compactMap { $0 }.first { $0.contains("MEASURE ") }
             let start = try XCTUnwrap(text?.range(of: "MEASURE ")?.upperBound)
             let suffix = try XCTUnwrap(text).suffix(from: start)
             // MEASURE is flat JSON, separate from the longer, potentially truncated AUDIT.

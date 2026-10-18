@@ -216,3 +216,11 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 新增只在 audit/dev 中使用的按需帧缓冲诊断：通过现有 Phaser renderer.snapshot 读取真实渲染后的缓冲区，报告像素、CSS/父容器尺寸、场景状态、可见性及上下文；另存 App 和整个原生屏幕截图。诊断读取图明确标注“不是原生屏幕截图”，其非空不自动视为屏幕已呈现。读取仅在点击时执行，连续验收期间禁用；不在真实采样窗口调用 GPU readPixels。普通生产 index.html/assets 的 17 个文件与实测 main13 仍逐字节相同。实际浏览器诊断及既有诊断回归共 16 项通过（含移动 WebKit、320px），手牌和灵石保持不变；日志 `artifacts/macos-renderer-readback-final-browser.log`，字节核对 `artifacts/macos-renderer-readback-final-parity.json`。
 
 原生诊断宏编译通过。实际尝试复用旧 App 被游戏输入差异检查在启动 XCTest 前拒绝，受保护审计 App 的 PID/哈希未变（`artifacts/macos-renderer-readback-source-guard.log`）。CI 仅在普通 Mac 原生检查失败后构建新的独立诊断 App 并收集 `--render-probe`；该收集步骤不把原有失败转为成功。新的配对 Mac 屏幕/帧缓冲结果仍待实际运行。
+
+### 2d45711：诊断文本查询遇到数值属性
+
+[39148626171](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39148626171) 的普通像素门禁仍失败。独立诊断 App 构建成功，但采集在 `DRAWSTATE` 的原生文本查询时抛出 `Can't use in/contains operator with collection 1 (not a collection)`，没有生成 probe.json，不能推定帧缓冲内容。完整归档为 226 MB；已通过 ZIP 范围读取取得 CRC 验证的完整 report.json/run.log（`artifacts/macos-2d45711-text/selected-files.json`），其余完整附件继续单独下载，未冒称全部归档已校验。
+
+查询对异构 StaticText.value 直接执行 CONTAINS，遇到数值 1 会异常。现统一用 CAST(value, 'NSString') 后匹配，并读取 value/label/title 三种文本入口；DRAWSTATE、MEASURE 和完成状态共用同一查询。Foundation 六类实测（数字、空值、缺失、value 文本、label 文本、title 文本）通过，原生宏编译通过；宏内也直接用实际查询工厂执行这六类回归。远端 XCTest 查询及配对数据仍待新一轮验证。
+
+CI 额外上传轻量 `macos-diagnostic-reports`（JSON 与 run.log），完整 xcresult/画面证据仍保留原附件。轻量文件只改善取证速度，不更改普通像素门禁、渲染器或结果判定。
