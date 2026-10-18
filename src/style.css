@@ -228,8 +228,10 @@ button:active:not(:disabled) {
   color: #b1b89e;
   border-radius: 50%;
 }
-.icon-button:hover {
-  background: #aebd8d0c;
+@media (hover: hover) and (pointer: fine) {
+  .icon-button:hover {
+    background: #aebd8d0c;
+  }
 }
 .mute-line {
   display: none;
@@ -404,8 +406,10 @@ button:active:not(:disabled) {
     filter 0.2s,
     opacity 0.2s;
 }
-.primary-button:hover:not(:disabled) {
-  filter: brightness(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .primary-button:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
 }
 .primary-button:disabled {
   opacity: 0.58;

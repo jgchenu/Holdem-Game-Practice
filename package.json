@@ -21,6 +21,7 @@
     "brand": "node scripts/brand.mjs",
     "test:android": "node scripts/platform.mjs android-test",
     "test:ios": "node scripts/platform.mjs ios-test",
+    "test:ios:cold": "node scripts/ios-cold-entry.mjs",
     "audit:ios": "node scripts/platform.mjs ios-audit",
     "audit:android": "node scripts/platform.mjs android-audit",
     "build:desktop-audit": "node scripts/platform.mjs desktop-audit",

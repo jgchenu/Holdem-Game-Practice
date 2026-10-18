@@ -250,8 +250,10 @@
 .table-action:disabled {
   opacity: 0.35;
 }
-.table-action:hover:not(:disabled) {
-  filter: brightness(1.1);
+@media (hover: hover) and (pointer: fine) {
+  .table-action:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
 }
 .waiting-copy {
   display: flex;

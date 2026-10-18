@@ -5,9 +5,11 @@ export function initializeStartupTrace() {
   const events: object[] = [], errors: string[] = [], history: object[] = [];
   const snapshot = () => ({ atMs: Math.round(performance.now()), phase: document.getElementById('app')?.dataset.bootPhase, detail: document.getElementById('app')?.dataset.bootDetail, inert: document.getElementById('app')?.inert, readyState: document.readyState, focused: document.hasFocus(), hidden: document.hidden, open: [...document.querySelectorAll('dialog[open]')].map(d => d.id), viewport: { width:innerWidth,height:innerHeight,top:visualViewport?.offsetTop,scale:visualViewport?.scale } });
   const record = (value: object) => { events.push(value); if (events.length>60) events.shift(); };
-  for (const type of ['pointerdown','pointerup','pointercancel','touchstart','touchend','touchcancel','click','close']) document.addEventListener(type, event => {
+  for (const type of ['pointerdown','pointermove','pointerup','pointercancel','touchstart','touchmove','touchend','touchcancel','click','close']) document.addEventListener(type, event => {
     const e = event as MouseEvent, target = event.target as HTMLElement;
-    record({ type, target:target.id || target.tagName, connected:target.isConnected, button:target.closest('button')?.id, x:e.clientX, y:e.clientY, ...snapshot() });
+    if(type==='pointermove' && (event as PointerEvent).pointerType!=='touch' && !e.buttons)return;
+    const touch=(event as TouchEvent).changedTouches?.[0];
+    record({ type, trusted:event.isTrusted, eventTimestampMs:event.timeStamp, target:target.id || target.tagName, connected:target.isConnected, button:target.closest('button')?.id, x:touch?.clientX??e.clientX, y:touch?.clientY??e.clientY, ...snapshot() });
     queueMicrotask(()=>{ if(type==='click') record({type:'after-click',...snapshot()}); render(); });
   },true);
   const error = (message: string) => { errors.push(message.slice(0,500)); if(errors.length>10)errors.shift(); render(); };
@@ -31,8 +33,8 @@ export function initializeStartupTrace() {
       setDiagnosticText(stateNode,'BOOTSTATE '+JSON.stringify({...state,history}));
     }
     if(panel.hidden)return;
-    const button=document.getElementById('learn-start'), r=button?.getBoundingClientRect();
-    setDiagnosticText(output,'STARTUP '+JSON.stringify({events,errors,current,entry:r?{x:r.x,y:r.y,width:r.width,height:r.height}:null}));
+    const button=document.getElementById('learn-start'), r=button?.getBoundingClientRect(), styles=button?getComputedStyle(button):null;
+    setDiagnosticText(output,'STARTUP '+JSON.stringify({events,errors,current,inputCapabilities:{hover:matchMedia('(hover: hover)').matches,finePointer:matchMedia('(pointer: fine)').matches,touchPoints:navigator.maxTouchPoints},entry:r?{x:r.x,y:r.y,width:r.width,height:r.height,touchAction:styles?.touchAction,filter:styles?.filter,transform:styles?.transform}:null}));
   }
   host.querySelector('#startup-trace-open')!.addEventListener('click',()=>{panel.hidden=false;render();});
   host.querySelector('#startup-trace-close')!.addEventListener('click',()=>{panel.hidden=true;});

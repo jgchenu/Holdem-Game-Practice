@@ -80,9 +80,9 @@ src/
 - 首次运行浏览器测试需执行 `npx playwright install chromium webkit`；`npm run test:e2e` 覆盖 Chromium 的手机/窄屏/桌面尺寸及移动尺寸的 WebKit。
 - WebKit 和触控模拟是浏览器兼容验证，不等同于 iOS / Android 真机验证。
 - 设置中的 FPS / P95 是当前浏览器主循环帧间隔采样，不是 GPU 帧提交、触控延迟或手机性能保证。
-- 目标手机稳定 60 FPS 是验收目标，尚需 iOS / Android 真机、持续运行、后台恢复与安装包验证。
+- 目标手机稳定 60 FPS 是验收目标；本轮按用户选择使用模拟器，已有分平台原生功能、后台恢复及持续运行证据。各源码版本、安装包与尚未完成的项目见交付记录；手机硬件与 GPU 呈现仍未验证。
 - 视觉与协作长期约定见 `AGENTS.md`。
 
 ## 原生工程与安装包
 
-移动端使用 Capacitor 承载同一牌桌和规则，桌面端使用 Tauri。`npm run build:android`、`npm run build:ios`、`npm run build:desktop` 会同步资源并构建当前平台产物。Android 需要 SDK 36 / JDK 21，iOS 需要 macOS / Xcode 26，桌面需要 Rust。`npm run test:android` 执行模拟器 App 测试，`npm run test:ios` 执行原生 XCTest 师父面板与进程重启恢复测试。安装、签名、真机与性能验收状态见 [docs/DELIVERY.md](docs/DELIVERY.md)。
+移动端使用 Capacitor 承载同一牌桌和规则，桌面端使用 Tauri。`npm run build:android`、`npm run build:ios`、`npm run build:desktop` 会同步资源并构建当前平台产物。Android 需要 SDK 36 / JDK 21，iOS 需要 macOS / Xcode 26，桌面需要 Rust。`npm run test:android` 执行模拟器 App 测试，`npm run test:ios` 执行原生 XCTest 教学、师父面板与进程重启恢复测试。`npm run test:ios:cold` 在三个独立新模拟器上依次运行相同套件，首次教学点击失败即停止，不重试；只清理本次创建的设备。安装、签名、真机与性能验收状态见 [docs/DELIVERY.md](docs/DELIVERY.md)。

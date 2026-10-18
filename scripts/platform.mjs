@@ -77,13 +77,16 @@ const cargo = join(homedir(), ".cargo", "bin");
 if (existsSync(cargo))
   env[pathKey] =
     cargo + (process.platform === "win32" ? ";" : ":") + (env[pathKey] || "");
-function run(command, args, cwd = root) {
+function run(command, args, cwd = root, after) {
   const result = spawnSync(command, args, {
     cwd,
     env,
     stdio: "inherit",
     shell: process.platform === "win32" && command.endsWith(".cmd"),
   });
+  if (after) {
+    try { after(); } catch (error) { console.error("Native diagnostic export failed", error); }
+  }
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status || 1);
 }
@@ -201,6 +204,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
   let destination = simulator
     ? "generic/platform=iOS Simulator"
     : "generic/platform=iOS";
+  let testDeviceUDID;
   if (testing) {
     const listing = spawnSync(
       "xcrun",
@@ -224,6 +228,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
     // process; never retry the teaching tap or relaunch to hide that failure.
     run("open", ["-g", "-a", "Simulator", "--args", "-CurrentDeviceUDID", device.udid]);
     destination = `platform=iOS Simulator,id=${device.udid}`;
+    testDeviceUDID = device.udid;
   }
   if (signed && !env.APPLE_TEAM_ID)
     throw new Error(
@@ -234,6 +239,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
     "artifacts",
     audit ? "ios-audit" : simulator ? "ios" : signed ? "ios-signed" : "ios-device",
   );
+  const nativeInputStartedAt = Date.now();
   run("xcodebuild", [
     "-project",
     "ios/App/App.xcodeproj",
@@ -245,6 +251,7 @@ if (target === "android" || target === "android-test" || target === "android-aud
     destination,
     "-derivedDataPath",
     derived,
+    ...(target === "ios-test" ? ["SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) STARTUP_TRACE"] : []),
     ...(audit ? [`SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) NATIVE_AUDIT${liveAudit ? " NATIVE_LIVE_AI" : ""}${extendedIOSAudit ? " NATIVE_SOAK" : ""}`, "-only-testing:PracticeUITests/PracticeUITests/testNativeRuntimeAudioAndFrames"] : []),
     ...(signed
       ? [
@@ -263,7 +270,23 @@ if (target === "android" || target === "android-test" || target === "android-aud
           "test",
         ]
       : ["build"]),
-  ]);
+  ], root, target === "ios-test" ? () => {
+    // Save the app's passive UIKit observer even when XCTest fails. No input
+    // is injected here, and the original xcodebuild result is left unchanged.
+    const file = join(root,"artifacts",`ios-native-input-${Date.now()}.json`);
+    const container = spawnSync("xcrun",["simctl","get_app_container",testDeviceUDID,"com.wendao.poker","data"],{encoding:"utf8",timeout:5000});
+    let entries=null, readError, rawLog, rawRecordCount=0;
+    try {
+      if(container.status!==0)throw new Error(container.error?.message || container.stderr || "Test app container is unavailable");
+      rawLog = readFileSync(join(container.stdout.trim(),"Library","Caches","wendao-native-input.jsonl"),"utf8");
+      const records = rawLog.trim().split("\n").filter(Boolean).map(line=>JSON.parse(line));
+      rawRecordCount = records.length;
+      entries = records.filter(record=>typeof record.atUnixMs==="number"&&record.atUnixMs>=nativeInputStartedAt);
+    } catch(error) { readError=error.message; }
+    const observerInstalled=Array.isArray(entries)&&entries.some(record=>record.event==="observer-ready");
+    writeFileSync(file,JSON.stringify({device:testDeviceUDID,runStartedAtUnixMs:nativeInputStartedAt,captureSucceeded:observerInstalled,observerInstalled,status:container.status,error:readError,rawRecordCount,excludedOlderRecords:entries===null?null:rawRecordCount-entries.length,entries,rawLog:entries===null?rawLog:undefined,scope:"Existing outer UIScrollView pan recognizer and test-build installation markers only, exported from this test app's known cache file and limited to this run. No recognizer or cancellation behavior is changed; absence of a pan event does not identify another recognizer."},null,2)+"\n");
+    console.log(`iOS native input log: ${file}`);
+  } : undefined);
   console.log(
     simulator
       ? `iOS 模拟器产物：artifacts/${audit ? "ios-audit" : "ios"}/Build/Products/Debug-iphonesimulator/App.app`

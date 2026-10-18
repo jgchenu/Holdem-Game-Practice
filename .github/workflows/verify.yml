@@ -72,7 +72,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run test:ios
+      - run: npm run test:ios:cold
       # Test-only input tracing must not ship in the simulator package.
       - run: npm run build:ios
       - name: Archive simulator app preserving bundle permissions
@@ -84,6 +84,8 @@ jobs:
           path: |
             artifacts/packages/*.zip
             artifacts/ios-native-*.xcresult/
+            artifacts/ios-native-input-*.json
+            artifacts/ios-cold-entry.json
           retention-days: 14
 
   desktop:
