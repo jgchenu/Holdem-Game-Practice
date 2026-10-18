@@ -1,4 +1,5 @@
-import { cardText, rankOf, rankText, suitOf, suits, handNames } from './core/cards';
+import { cardText, rankOf, rankText, suitOf, suits } from './core/cards';
+import { renderHandGuide } from './hand-guide';
 import { observe, type Action } from './core/poker';
 import { tutorialAction, tutorialHand, tutorialHero, tutorialLastStep } from './onboarding';
 import { readStorage, writeStorage, flushStorage, storageHealthy } from './storage';
@@ -35,7 +36,8 @@ export function openOnboarding(host: HTMLElement, close: () => void) {
     host.innerHTML = `<div class="tutorial-progress"><span>零基础带练 · ${step + 1} / ${lessons.length}</span><span>预设教学</span><div><i style="width:${(step + 1) / lessons.length * 100}%"></i></div></div>
       <div class="tutorial-scroll"><p class="eyebrow">青玄师父 · 一步一步来</p><h3 id="tutorial-step-title" tabindex="-1">${title}</h3><p class="tutorial-copy">${copy}</p>
       ${step > 0 && step < tutorialLastStep ? `<section class="tutorial-table" aria-label="三人教学桌"><div class="trial-table-heading"><span>${step === 10 ? '另一个弃牌例子' : step < 5 ? '公共牌还没发出' : step < 7 ? '翻牌 · 3 张' : step < 8 ? '转牌 · 4 张' : '河牌 · 5 张'}</span><span>灵石池 <strong>${pot}</strong></span></div><div class="tutorial-opponents">${view.players.slice(0,2).map(p => `<div><span>${p.name}</span><div>${p.hole ? p.hole.map(c => card(c)).join('') : '<span class="trial-card-back">◇</span><span class="trial-card-back">◇</span>'}</div><small>本轮投入 ${p.streetBet}</small></div>`).join('')}</div><button type="button" class="tutorial-board" id="tutorial-board" aria-label="点击三张公共牌" ${step === 5 ? '' : 'disabled'}>${view.board.length ? view.board.map(c => card(c, best.includes(c))).join('') : '<span class="trial-unopened">这里会依次放 3 + 1 + 1 张公共牌</span>'}</button><button type="button" class="tutorial-hole" id="tutorial-hole" aria-label="点击你的两张底牌" ${step === 1 ? '' : 'disabled'}>${view.players[tutorialHero].hole!.map(c => card(c, best.includes(c))).join('')}</button><p class="tutorial-wallet">你 · 剩余 ${view.players[tutorialHero].stack} 灵石<span>本轮已投入 ${view.players[tutorialHero].streetBet}</span></p></section>` : `<div class="tutorial-welcome"><span class="seal">道</span><p>${step === 0 ? '先看懂，再落子' : '知进退，也是修行'}</p><span>认识牌面 → 亲手行动 → 看懂输赢</span></div>`}
-      <p class="tutorial-detail">${detail}</p>${step === 9 ? `<p class="tutorial-five">金框标出你最终使用的五张牌：${best.map(cardText).join('、')}。</p><details class="tutorial-ranks"><summary>想看牌型大小时，再展开</summary><p>从强到弱：${[...handNames].reverse().join(' ＞ ')}。同类牌型再比具体点数，花色不决定输赢。</p></details>` : ''}
+      <p class="tutorial-detail">${detail}</p>${step === 9 ? `<p class="tutorial-five">金框标出你最终使用的五张牌：${best.map(cardText).join('、')}。</p>` : ''}
+      ${renderHandGuide(step === 9)}
       <p class="tutorial-boundary">固定局面只用于讲规则，师父指定的行动不是盈利建议。原练习桌的手牌和灵石保持不变。</p><p id="tutorial-feedback" role="status"></p></div>
       <div class="tutorial-actions">${step > 0 && step < tutorialLastStep ? '<button type="button" id="tutorial-prev" class="text-button">← 上一步</button>' : ''}<button type="button" id="tutorial-next" class="primary-button">${target}</button>${step === tutorialLastStep ? '<button type="button" id="tutorial-replay" class="text-button">再跟师父学一遍</button>' : ''}</div>`;
     host.querySelector('#tutorial-prev')?.addEventListener('click', () => void go(step - 1));

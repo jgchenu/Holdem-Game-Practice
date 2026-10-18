@@ -1306,8 +1306,35 @@ html[data-platform="native"] .web-install-note {
 .tutorial-actions { flex-shrink:0; padding:10px 20px max(20px,env(safe-area-inset-bottom)); border-top:1px solid #b7b16b33; background:#183126; display:grid; gap:5px; }
 .tutorial-actions .primary-button { min-height:50px; padding:10px 6px; font-size:16px; }
 .tutorial-actions .text-button { min-height:36px; }
-.tutorial-five,.tutorial-ranks { font-size:12px; line-height:1.9; color:#d6c68f; }
-.tutorial-ranks summary { min-height:44px; padding:10px 0; cursor:pointer; }
+.tutorial-five { font-size:12px; line-height:1.9; color:#d6c68f; }
+.hand-guide { margin:18px 0; border:1px solid #bda46e66; border-radius:12px; background:linear-gradient(145deg,#344a312e,#112b2255); }
+.hand-guide > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; padding:12px 14px; cursor:pointer; list-style:none; color:#e0cd96; font:18px var(--serif); }
+.hand-guide > summary::-webkit-details-marker { display:none; }
+.hand-guide > summary small { display:block; margin-top:6px; color:#b0bda2; font:12px/1.5 system-ui,sans-serif; }
+.hand-guide-toggle { font:24px/1 Georgia,serif; }
+.hand-guide[open] > summary { border-bottom:1px solid #bda46e33; }
+.hand-guide[open] .hand-guide-toggle { transform:rotate(45deg); }
+.hand-guide-body { padding:0 14px 14px; }
+.hand-guide-intro { color:#b8c5a7; font-size:12px; line-height:1.9; margin:14px 0; }
+.hand-guide-list { list-style:none; margin:0; padding:0; }
+.hand-guide-list > li { padding:18px 0; border-bottom:1px solid #bda46e33; }
+.hand-guide-list > li:first-child { padding-top:8px; }
+.hand-guide-heading { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.hand-guide-order { color:#c8b47d; font:italic 17px Georgia,serif; }
+.hand-guide-heading h4 { margin:0; color:#e6d6a9; font:20px var(--serif); }
+.hand-guide-badge { margin-left:auto; padding:2px 8px; border:1px solid #c4ab7055; border-radius:20px; color:#d5c38c; font-size:11px; }
+.hand-guide-cards { display:flex; gap:8px; }
+.hand-guide-cards .trial-card { width:38px; height:55px; border-radius:5px; animation:none; }
+.hand-guide-cards .trial-card b { font-size:17px; }
+.hand-guide-cards .trial-card i { font-size:22px; }
+.hand-guide-cards .hand-guide-key { border-bottom:3px solid #ba8b3f; box-shadow:0 3px 7px #0004,inset 0 0 0 2px #b7a97444; }
+.hand-guide-list > li > p,.hand-guide-ties p { margin:12px 0 4px; color:#e0ddc9; font-size:14px; line-height:1.85; }
+.hand-guide-compare { color:#b3c1a8; font-size:13px; line-height:1.85; }
+.hand-guide-compare summary { cursor:pointer; min-height:44px; padding:10px 0; }
+.hand-guide-compare p { margin:0 0 6px; padding:10px 12px; background:#aabd8c0a; border-left:2px solid #bda46e66; }
+.hand-guide summary:focus-visible { outline:2px solid #e1c889; outline-offset:3px; border-radius:5px; }
+.hand-guide-ties { margin-top:18px; }
+.hand-guide-ties strong { color:#e0cd96; font:17px var(--serif); }
 #tutorial-feedback { color:#e2c285; font-size:12px; }
 .tutorial-entry-card { width:100%; text-align:left; display:flex; align-items:center; gap:12px; padding:16px 12px; border:1px solid #c9af7577; border-radius:12px; background:linear-gradient(135deg,#bca36715,#29433233); color:#dac68c; margin:0 0 20px; }
 .tutorial-entry-card strong { display:block; font:16px var(--serif); }

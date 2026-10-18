@@ -28,6 +28,7 @@ test('完全新手可从入口完成逐步带练，看到3/1/1发牌与最强五
   await page.locator('#tutorial-next').click();
   await expect(page.locator('.tutorial-best')).toHaveCount(5);
   await expect(page.locator('.tutorial-five')).toContainText('最终使用的五张牌');
+  await expect(page.locator('.hand-guide')).toHaveAttribute('open','');
   await expect(page.locator('#tutorial-board .trial-card').last()).toHaveCSS('opacity','1');
   await page.screenshot({path:`artifacts/onboarding-five-${info.project.name}.png`});
   await page.locator('#tutorial-next').click();
@@ -49,6 +50,57 @@ test('完全新手可从入口完成逐步带练，看到3/1/1发牌与最强五
   await page.reload();
   await page.locator('#tutorial-open').click();
   await expect(page.locator('#tutorial-step-title')).toHaveText('先认识你的两张底牌');
+});
+
+test('新手可看九种牌型示例与比牌说明，小屏滚动保留继续按钮且不改存档', async ({page}, info) => {
+  if (info.project.name === 'small-mobile') await page.setViewportSize({width:320,height:568});
+  await page.goto('/');
+  await page.locator('#learn-start').click();
+  await page.locator('#tutorial-next').click();
+  await page.locator('#tutorial-hole').click();
+  const progress = await page.evaluate(() => localStorage.getItem('wendao:onboarding:v1'));
+  const guide = page.locator('.hand-guide');
+  await guide.locator(':scope > summary').click();
+  await expect(guide.locator('.hand-guide-list > li')).toHaveCount(9);
+  await expect(guide.locator('.trial-card')).toHaveCount(45);
+  for (const category of [8,7,6,5,4,3,2,1,0]) {
+    const entry = guide.locator(`[data-hand-category="${category}"]`);
+    await entry.locator('h4').scrollIntoViewIfNeeded();
+    await expect(entry.locator('.trial-card')).toHaveCount(5);
+    const row = await entry.locator('.hand-guide-cards').boundingBox();
+    const lastCard = await entry.locator('.trial-card').last().boundingBox();
+    expect(lastCard!.x + lastCard!.width).toBeLessThanOrEqual(row!.x + row!.width);
+    const cta = await page.locator('#tutorial-next').boundingBox();
+    expect(cta!.y + cta!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
+  }
+  const pair = guide.locator('[data-hand-category="1"]');
+  await pair.getByText('同牌型怎么比？',{exact:true}).click();
+  await expect(pair).toContainText('一对 K 大过一对 Q');
+  await expect(pair.locator('.hand-guide-key')).toHaveCount(2);
+  // Position the example within its own scroll area; scrolling the entire dialog
+  // with DOM scrollIntoView would also move its overflow-hidden ancestors.
+  await page.locator('.tutorial-scroll').evaluate(el => {
+    const title = el.querySelector('[data-hand-category="1"] h4')!;
+    el.scrollTop += title.getBoundingClientRect().top - el.getBoundingClientRect().top - 10;
+  });
+  const pairCta = await page.locator('#tutorial-next').boundingBox();
+  expect(pairCta!.y + pairCta!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
+  await page.screenshot({path:`artifacts/hand-guide-pair-${info.project.name}.png`});
+  const straightFlush = guide.locator('[data-hand-category="8"]');
+  await straightFlush.getByText('同牌型怎么比？',{exact:true}).click();
+  await expect(straightFlush).toContainText('皇家同花顺');
+  await straightFlush.scrollIntoViewIfNeeded();
+  await page.screenshot({path:`artifacts/hand-guide-strongest-${info.project.name}.png`});
+  await guide.locator('.hand-guide-ties').scrollIntoViewIfNeeded();
+  await expect(guide.locator('.hand-guide-ties')).toContainText('不比第六、七张，也不比花色');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(await page.locator('.tutorial-scroll').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => localStorage.getItem('wendao:onboarding:v1'))).toBe(progress);
+  await page.getByRole('button',{name:'关闭新手教学'}).click();
+  await expect(page.locator('#wallet')).toHaveText('1,000');
+  await page.reload();
+  await page.locator('#tutorial-open').click();
+  await expect(page.locator('#tutorial-step-title')).toHaveText('牌上的字和图案怎么看');
 });
 
 test('牌局中能找到新手教学，教学暂停并保留原手牌与灵石', async ({page})=>{
