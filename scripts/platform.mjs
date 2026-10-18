@@ -176,6 +176,9 @@ if (target === "android" || target === "android-test") {
       : devices.find((device) => device.state === "Booted") || devices[0];
     if (!device)
       throw new Error("请安装可用的 iPhone 模拟器，或设置 IOS_TEST_DEVICE。");
+    // Wait for first-boot setup and migrations before XCTest tries to launch
+    // the application on a fresh CI simulator.
+    run("xcrun", ["simctl", "bootstatus", device.udid, "-b"]);
     destination = `platform=iOS Simulator,id=${device.udid}`;
   }
   if (signed && !env.APPLE_TEAM_ID)

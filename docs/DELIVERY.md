@@ -20,7 +20,7 @@
 | iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；师父面板、试炼和进程终止再启动恢复 XCTest 2 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
 | Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器，原生自动化覆盖行动、加注、Activity 重建、完整动画、摊牌复盘、师父与试炼印记恢复；主机编排强制停止与新进程恢复通过 | 真机连接、低内存回收、音频、触控与持续性能 |
 | macOS | Tauri Apple Silicon App / DMG 可构建 | 本机已操作恢复、加注、翻牌、师父；最新窗口初始化的 GUI 复验待解锁 | 最新包窗口复验、音频、持续性能、签名公证 |
-| Windows | Tauri x64 NSIS 可构建 | 历史 CI 实际安装通过核心操作；新增强制结束进程测试发现旧版存档回退，当前原生文件修复待新 CI 实跑 | 修复后的冷启动、用户电脑实际运行、音频与持续性能 |
+| Windows | Tauri x64 NSIS 可构建 | 4d5b219 的 Windows CI 实际安装通过 12 项检查，包括结束整个原生进程树、新进程恢复下一手、灵石、课程及印记；原生文件测试 4 项通过 | 用户电脑实际运行、音频与持续性能 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件，等待用户在本机 Xcode 登录并连接设备。
 
@@ -84,9 +84,15 @@ Windows 新增在下一手进行中暂停、记录手牌和灵石、按自身 PI
 
 本机 release Rust 文件测试 4 项通过，覆盖新实例读取、残留临时文件、覆盖写入、非法写入保留旧文件、损坏记录保护及并发键合并。完整浏览器 52 项通过、4 项按项目有意跳过，包含 Chromium / WebKit 的独立进程重开和四种配置的存储失败提示。失败提示用例明确模拟 IPC 不可用，不能代表原生磁盘运行。规则/服务/平台测试 20 项及服务端类型检查通过。
 
-证据：`artifacts/desktop-store-release-tests.log`、`artifacts/native-store-full-browser.log`、`artifacts/native-store-unit.log`、`artifacts/storage-failure-mobile.png`。Android 本轮仪器及独立进程恢复流程通过（`artifacts/native-store-android.log`，新旧进程 7895 → 7992）；iOS XCTest 2 项通过（`artifacts/native-store-ios.log`、`artifacts/ios-native-1792283973574.xcresult`），未签名设备 App 与 macOS App / DMG 构建通过，生产离线 4 项通过（分别为 `artifacts/native-store-ios-device.log`、`artifacts/native-store-macos.log`、`artifacts/native-store-offline.log`）。macOS 界面复验仍因锁屏未执行。CI 新增 macOS / Windows 上的原生文件测试；修复后的 Windows 安装包强制结束进程恢复尚待当前提交实跑。
+证据：`artifacts/desktop-store-release-tests.log`、`artifacts/native-store-full-browser.log`、`artifacts/native-store-unit.log`、`artifacts/storage-failure-mobile.png`。Android 本轮仪器及独立进程恢复流程通过（`artifacts/native-store-android.log`，新旧进程 7895 → 7992）；iOS XCTest 2 项通过（`artifacts/native-store-ios.log`、`artifacts/ios-native-1792283973574.xcresult`），未签名设备 App 与 macOS App / DMG 构建通过，生产离线 4 项通过（分别为 `artifacts/native-store-ios-device.log`、`artifacts/native-store-macos.log`、`artifacts/native-store-offline.log`）。macOS 界面复验仍因锁屏未执行。CI 新增 macOS / Windows 上的原生文件测试；4d5b219 的 Windows 安装包已通过 12 项原生检查，包含强制结束进程树后从 1720 切换至 3328，恢复下一手、灵石、课程和印记，结果位于 `artifacts/windows-4d5b219-run/artifacts/windows-native/result.json`。
 
 实现使用 [Tauri 原生命令](https://v2.tauri.app/develop/calling-rust/)、[Rust 文件同步与锁](https://doc.rust-lang.org/std/fs/struct.File.html) 和 [文件替换](https://doc.rust-lang.org/std/fs/fn.rename.html)。测试涉及进程结束；不宣称覆盖系统断电或硬件故障。
+
+### 本轮：跨系统测试启动条件
+
+4d5b219 的 [39083719029](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39083719029) 中，Windows、macOS、Android 成功；整轮仍失败。Web 51 项通过、1 项在 Linux WebKit 启动前失败：中文用例名进入配置目录参数，启动器在 C locale 下报 `Invalid byte sequence in conversion input`。现使用独立临时配置目录，两次启动仍共用同一目录；不跳过 WebKit，也不改变恢复断言。macOS 本机两种引擎重开回归 2 项通过（另两种重复尺寸主动跳过），日志为 `artifacts/browser-profile-path-fix.log`。
+
+iOS 同轮在 Xcode 首次启动应用超时，未进入功能断言；本机原生 2 项通过的证据保持独立记录。现先用本机 Xcode 的 `simctl bootstatus <id> -b` 确认测试模拟器完成初次启动和迁移，再交给 XCTest；未增加忽略失败或自动重试。CI 即使 iOS 测试失败也保留 xcresult，便于核对后续失败。本机更新后的 iOS 2 项 XCTest 通过（`artifacts/ios-bootstatus-regression.log`、`artifacts/ios-native-1792284749805.xcresult`），规则/服务/平台 20 项及服务端类型检查通过；当前修改的云端结果仍待执行。
 
 ## 可重复执行
 

@@ -1,13 +1,18 @@
-import { test, expect } from '@playwright/test';
-import { rm } from 'node:fs/promises';
+import { test, expect, type BrowserContext } from '@playwright/test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程和试炼', async ({ playwright, browserName }, info) => {
   test.skip(!['mobile', 'mobile-webkit'].includes(info.project.name), 'Cold-browser persistence is exercised once per engine at a mobile viewport');
   const type = playwright[browserName];
-  const profile = info.outputPath('isolated-browser-profile');
+  // Linux WebKit's launcher can use the C locale, which rejects non-ASCII CLI
+  // arguments. Keep this disposable profile independent of the Chinese test title.
+  const profile = await mkdtemp(join(tmpdir(), 'wendao-browser-profile-'));
   const options = { headless: true, viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' as const };
-  let context = await type.launchPersistentContext(profile, options);
+  let context: BrowserContext | undefined;
   try {
+    context = await type.launchPersistentContext(profile, options);
     await context.addInitScript(() => {
       if (location.protocol !== 'http:') return;
       localStorage.setItem('wendao:preferences:v1', '{"sound":false,"reducedMotion":true,"quality":"balanced"}');
@@ -48,7 +53,7 @@ test('关闭独立浏览器后，使用同一配置目录恢复牌局、课程�
     await expect(restored.locator('.trial-progress')).toHaveText('问心试炼 1 / 3');
     await restored.screenshot({ path: `artifacts/browser-relaunch-${info.project.name}.png` });
   } finally {
-    try { await context.close(); }
+    try { await context?.close(); }
     finally { await rm(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
   }
 });
