@@ -6,7 +6,7 @@
 
 - 独立扑克规则、加密随机洗牌、六人单人练习、七选五比牌、主池与边池、平局分池、未跟注返还。
 - 五名只接收本人底牌与公开信息的本地策略对手；当前对手不是求解器或大语言模型。
-- 九课三阶段、十八道练习、逐境解锁与学习进度、本手公开行动复盘；三场问心试炼使用真实规则，独立于随机练习桌。
+- 完全新手的十二步第一手带练，支持退出续学；九课三阶段、十八道练习、逐境解锁与学习进度、本手公开行动复盘；三场问心试炼使用真实规则，独立于随机练习桌。
 - 手机底部操作、加注确认、减少动态效果、暂停、存档恢复；损坏的结算记录被拒绝，旧版弃牌结算可迁移。
 - 师父面板先展示程序事实；兼容接口在服务端持有密钥，模型文本安全呈现，离线或失败时回退本地指引。
 - 移动端 Preferences 与桌面原生文件存储桥接、Web 离线缓存与版本隔离更新、主屏幕安装清单、统一图标与启动画面。
@@ -17,16 +17,22 @@
 | 平台 | 工程与构建 | 实际运行和功能证据 | 仍待验收 |
 | --- | --- | --- | --- |
 | Web | Vite 生产构建通过 | Chromium 手机/窄屏/桌面、移动尺寸 WebKit；离线重载与恢复通过 | 手机浏览器安装至主屏幕、长时间离线、实际触控和性能 |
-| iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；师父面板、试炼和进程终止再启动恢复 XCTest 2 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
+| iOS | Capacitor 模拟器和未签名真机工程可构建 | iPhone 17 Pro / iOS 26.5 模拟器；教学续学、师父面板、试炼和进程终止再启动恢复 XCTest 3 项通过 | Xcode 账号及签名、连接 iPhone、真机音频与持续性能 |
 | Android | SDK 36 / JDK 21 调试 APK 可构建 | API 36 模拟器，原生自动化覆盖行动、加注、Activity 重建、完整动画、摊牌复盘、师父与试炼印记恢复；主机编排强制停止与新进程恢复通过 | 真机连接、低内存回收、音频、触控与持续性能 |
-| macOS | Tauri Apple Silicon App / DMG 可构建 | 本机已操作恢复、加注、翻牌、师父；最新窗口初始化的 GUI 复验待解锁 | 最新包窗口复验、音频、持续性能、签名公证 |
-| Windows | Tauri x64 NSIS 可构建 | 4d5b219 的 Windows CI 实际安装通过 12 项检查，包括结束整个原生进程树、新进程恢复下一手、灵石、课程及印记；原生文件测试 4 项通过 | 用户电脑实际运行、音频与持续性能 |
+| macOS | Tauri Apple Silicon App / DMG 可构建 | 新版实际窗口已复验原手牌、灵石及教学步骤在退出 App 后恢复；原生文件 4 项通过 | 音频、持续性能、签名公证 |
+| Windows | Tauri x64 NSIS 可构建 | 7c517b0 的 Windows CI 实际安装通过 14 项检查，包括新进程恢复手牌、灵石、课程、印记与教学步骤；原生文件 4 项通过 | 用户电脑实际运行、音频与持续性能 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件，等待用户在本机 Xcode 登录并连接设备。
 
 ## 最近验证
 
-最近已确认全绿的功能提交 49bdc5c：[39078990197](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39078990197)，Web、Android、iOS、macOS、Windows 五项任务全部成功。其中规则/服务/平台单元测试 20 项，浏览器 46 项通过、2 项有意跳过，生产离线 4 项通过。iOS 包含原生 XCTest，Windows 包含 NSIS 安装后的实际原生运行，不是独立浏览器替代。
+当前功能源码为 7c517b0。本机浏览器 60 项、生产离线 6 项、规则/服务/平台单元 21 项、Rust 文件 4 项及 iOS 原生 3 项通过；Android 模拟器与 macOS 实际窗口也验证了教学进度在进程重启后恢复。本轮 [39100789879](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39100789879) CI 仍在执行。上轮 3078cd1 的五平台 CI 全部成功，但不能代替新增教学的验证。
+
+本轮候选包位于 `artifacts/packages/candidate-7c517b0/`。已收齐 Web ZIP、Android 调试 APK、iOS 模拟器与未签名设备 App ZIP、macOS arm64 DMG、Windows x64 NSIS。Windows 包来自同提交 CI，实际安装后 14 项检查通过，进程 9132 → 7152、教学步骤 3（界面第 4 步）恢复；报告位于 `artifacts/windows-7c517b0-run/artifacts/windows-native/`。SHA-256、ZIP 完整性、iOS 可执行权限与平台类型、DMG 校验和、APK v2 签名均已检查。Android APK 与两个 iOS App 中的教学入口脚本，与当前 Web 构建逐字节一致。`manifest.json` 保留源码提交、证据与未验收项，`releaseReady` 为 false。
+
+### 历史基线
+
+49bdc5c：[39078990197](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39078990197)，Web、Android、iOS、macOS、Windows 五项任务全部成功。其中规则/服务/平台单元测试 20 项，浏览器 46 项通过、2 项有意跳过，生产离线 4 项通过。iOS 包含原生 XCTest，Windows 包含 NSIS 安装后的实际原生运行，不是独立浏览器替代。
 
 该版本机原生回归：Android 原仪器及独立进程恢复流程、iOS XCTest 2 项通过。报告与日志：
 
@@ -145,7 +151,7 @@ Windows 测试采用安装后启动 App、测试进程显式启用本机端口�
 
 完整浏览器 60 项通过、4 项按项目有意跳过，覆盖 Chromium / WebKit 和 320×568 教学操作区；其中新教学专项 8 项通过。核心单元含真实发牌/投入/比牌的教学检查共 21 项通过；iOS 原生 3 项通过，新增教学进度在进程重启后恢复和按钮安全区检查（`artifacts/onboarding-ios.log`，`artifacts/ios-native-1792300811012.xcresult`）。Android API 36 模拟器仪器测试及独立进程恢复通过（30349 → 30449），核对教学步骤由 Preferences 恢复。生产离线 6 项、Rust 文件测试 4 项及服务端类型检查通过，iOS 模拟器、未签名设备包、Android APK 与 macOS App / DMG 构建成功。日志为 `artifacts/onboarding-full-browser-final.log`、`artifacts/onboarding-unit-final.log`、`artifacts/onboarding-android.log`、`artifacts/onboarding-offline-final.log`、`artifacts/onboarding-desktop-store-final.log` 和 `artifacts/onboarding-*-final.log`。
 
-Mac 已解锁，本轮通过实际原生窗口验证新版教学：原练习桌的 J♦ 10♦ J♥ / 3♥ Q♣、灵石 960 和暂停状态在启动后保留；推进教学到第二步，退出 App 再启动，重新打开仍为第二步；最后回到教学欢迎页。此项为 CUA 实际操作观察，非自动化性能测量。Windows 新增教学推进及进程退出恢复断言，须等待本轮 CI，不能用上轮 3078cd1 的成功结果代替。
+Mac 已解锁，本轮通过实际原生窗口验证新版教学：原练习桌的 J♦ 10♦ J♥ / 3♥ Q♣、灵石 960 和暂停状态在启动后保留；推进教学到第二步，退出 App 再启动，重新打开仍为第二步；最后回到教学欢迎页。此项为 CUA 实际操作观察，非自动化性能测量。Windows 新增教学推进及进程退出恢复断言已在本轮 CI 实际安装版通过，不能用上轮 3078cd1 的成功结果代替。
 
 首轮完整浏览器执行期间改动了前端与字体，开发服务器热重载导致两项中途返回首屏，记录保留于 `artifacts/onboarding-full-browser.log` 与 `artifacts/onboarding-initial-browser-failures/`。冻结源文件后完整执行 60 项通过，未放宽功能断言。
 
