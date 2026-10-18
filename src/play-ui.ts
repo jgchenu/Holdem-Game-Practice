@@ -46,10 +46,10 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <section class="live-table-wrap"><div id="live-table" role="img" aria-label="六人牌桌，尚未发牌"></div><div id="loading" role="status">正在铺开牌席…</div><button id="inspect" class="look-button" disabled aria-label="抬起或放下手牌">观牌</button></section>
     <section class="play-dock" aria-label="牌局操作">
       <div class="live-mentor"><span class="mentor-emblem" aria-hidden="true">玄</span><div><div class="mentor-heading">青玄师父 <button id="tutorial-open" class="mentor-badge mentor-consult">新手教学</button><button id="coach-open" class="mentor-badge mentor-consult" aria-label="请教青玄师父">请教师父 ›</button></div><p id="tip" aria-live="polite"></p></div></div>
-      <div class="turn-info"><span id="turn-status" role="status">静心入席</span><span>你的灵石 <strong id="wallet">1,000</strong></span></div>
+      <div class="turn-info"><span class="turn-state"><span id="turn-status" role="status">静心入席</span><button id="resume" class="resume-button" hidden>继续修炼 →</button></span><span>你的灵石 <strong id="wallet">1,000</strong></span></div>
       <div id="start-panel" class="control-panel beginner-entry"><button id="learn-start" class="primary-button">从零学德州 →</button><button id="start" class="primary-button" disabled>入席修炼 <span>→</span></button></div>
       <div id="turn-panel" class="control-panel turn-actions" hidden><button id="fold" class="table-action fold-action">弃牌<small>放下此手</small></button><button id="call" class="table-action call-action">过牌<small>无需投入</small></button><button id="raise" class="table-action raise-action">加注<small>选择金额</small></button></div>
-      <div id="wait-panel" class="control-panel" hidden><button id="resume" class="primary-button">继续修炼 →</button><p id="waiting" class="waiting-copy" hidden><span class="thinking-dot"></span>道友正在思考…</p></div>
+      <div id="wait-panel" class="control-panel" hidden><p id="paused-copy" class="waiting-copy paused-copy" hidden>牌局已暂停 · 操作区已锁定</p><p id="waiting" class="waiting-copy" hidden><span class="thinking-dot"></span>道友正在思考…</p></div>
       <div id="result-panel" class="control-panel result-actions" hidden><button id="review" class="review-button">本手复盘</button><button id="next" class="primary-button">下一手 →</button></div>
       <div class="dock-note"><span id="save-status" role="status">本地保存 · 单人练习</span><button id="about">玩法说明 ⓘ</button></div>
     </section>
@@ -182,10 +182,12 @@ function updateUI() {
   button("next").disabled = busy;
   button("pause").disabled = !hand || !!complete || !ready || (paused && busy);
   button("pause").textContent = paused ? "继续" : "暂停";
-  button("resume").hidden = !paused && !failed;
+  button("resume").hidden = !hand || !!complete || (!paused && !failed);
   button("resume").textContent = failed ? "恢复牌桌 →" : "继续修炼 →";
   button("resume").disabled = busy;
   get("waiting").hidden = paused || failed;
+  get("paused-copy").hidden = !paused && !failed;
+  get("paused-copy").textContent = failed ? "牌席待恢复 · 操作区已锁定" : "牌局已暂停 · 操作区已锁定";
   button("inspect").disabled =
     !ready ||
     busy ||
@@ -337,8 +339,8 @@ async function resume() {
   }
   if (!failed) {
     paused = false;
-    // The full-width resume control becomes betting controls at the same
-    // position. Absorb a rapid second tap instead of committing a new wager.
+    // Keep a brief input guard as well as keeping resume outside the betting
+    // row. A delayed repeat tap must never acquire a different money action.
     const guardedUntil = resumeActionReadyAt = performance.now() + 300;
     setTimeout(() => { if (resumeActionReadyAt === guardedUntil) updateUI(); }, 300);
     updateUI();

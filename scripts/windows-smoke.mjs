@@ -226,7 +226,13 @@ async function verifyRuntime() {
     await until(() => execute("return ['complete','failed'].includes(document.querySelector('#audit-status').dataset.phase)"), `soak round ${cycle} completes`, 110_000, 750);
     status = await execute("return {phase:document.querySelector('#audit-status').dataset.phase,text:document.querySelector('#audit-status').textContent}");
     measurements = await execute("return JSON.parse(document.querySelector('#audit-report').textContent.slice(6))");
-    rounds.push({cycle,status,measurements,memory:memory()});
+    const round = {cycle,status,measurements,memory:null};
+    // Preserve the real native frame report even if the subsequent OS query fails.
+    const roundPath = join(output,`round-${String(cycle).padStart(2,'0')}.json`);
+    writeFileSync(roundPath,JSON.stringify(round,null,2));
+    round.memory = memory();
+    writeFileSync(roundPath,JSON.stringify(round,null,2));
+    rounds.push(round);
     // Preserve completed rounds even when a later round fails or the job ends.
     writeFileSync(join(output,'soak.json'),JSON.stringify({requestedCycles:soakCycles,completedCycles:rounds.length,elapsedMs:Date.now()-started,memoryBefore,rounds},null,2));
     assert.equal(status.phase,'complete',status.text);
@@ -437,7 +443,7 @@ try {
   );
   }
 } catch (error) {
-  writeFileSync(join(output, "result.json"), JSON.stringify({ passed: false, error: error.message }, null, 2));
+  writeFileSync(join(output, "result.json"), JSON.stringify({ passed: false, error: error.message, memorySamplingFailure:error.samplingAttempts }, null, 2));
   if (session) {
     try {
       await screenshot("failure");

@@ -55,6 +55,34 @@ test("恢复牌局时快速连点不会穿透成跟注或额外投入", async ({
   await expect(page.locator('#wallet')).not.toHaveText(before.wallet!);
 });
 
+test('继续按钮的位置在恢复后不会变成下注按钮，晚到的第二次触摸不投入灵石', async ({page}, info) => {
+  if(info.project.name==='small-mobile') await page.setViewportSize({width:320,height:568});
+  await start(page);
+  await page.locator('#pause').click();
+  await expect(page.locator('#resume')).toBeVisible();
+  const before = await page.evaluate(() => ({hand:document.querySelector('#live-table')!.getAttribute('aria-label'),wallet:document.querySelector('#wallet')!.textContent}));
+  const r = (await page.locator('#resume').boundingBox())!;
+  expect(r.height).toBeGreaterThanOrEqual(44);
+  expect(r.y).toBeGreaterThanOrEqual(0);
+  expect(r.y+r.height).toBeLessThan(page.viewportSize()!.height);
+  const x=r.x+r.width/2, y=r.y+r.height/2;
+  await page.screenshot({path:`artifacts/resume-safe-position-paused-${info.project.name}.png`});
+  const tap = () => info.project.use.hasTouch ? page.touchscreen.tap(x,y) : page.mouse.click(x,y);
+  await tap();
+  // Wait until the original timer has actually released the betting controls.
+  // The layout must stay safe even when a busy device delivers the next tap late.
+  await expect(page.locator('#call')).toBeEnabled();
+  await expect(page.locator('#call')).toBeInViewport({ratio:1});
+  await tap();
+  expect(await page.evaluate(() => ({hand:document.querySelector('#live-table')!.getAttribute('aria-label'),wallet:document.querySelector('#wallet')!.textContent}))).toEqual(before);
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  await page.screenshot({path:`artifacts/resume-safe-position-active-${info.project.name}.png`});
+  const target = await page.evaluate(({x,y}) => document.elementFromPoint(x,y)?.closest('button')?.id, {x,y});
+  expect(['fold','call','raise']).not.toContain(target);
+  await page.locator('#call').click(); await idle(page);
+  await expect(page.locator('#wallet')).not.toHaveText(before.wallet!);
+});
+
 test("手机下注面板、重复点击保护与刷新后恢复当前手牌", async ({
   page,
 }, info) => {

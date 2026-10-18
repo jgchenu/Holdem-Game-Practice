@@ -119,3 +119,15 @@ iOS 启动交接进一步改为等待原生 UIKit 确认 WebView 已附着窗口
 Android 同轮 SwiftShader 软件渲染模拟器普通回归两次在首次教学后关闭失败，保留 `artifacts/android-handover-first-attempt/` 与 `artifacts/android-handover-diagnostic-attempt/`。诊断显示 down / up 均命中 close-button，处理间隔约 537.5 ms，没有 click，弹窗仍开，页面 inert=false；不能把这个间隔说成手机触控延迟或实际手指按住时长。普通功能测试原先使用同步 sendPointerSync，现在与已有长测一致，使用 [UiAutomation 异步原生事件注入](https://developer.android.com/reference/android/app/UiAutomation#injectInputEvent(android.view.InputEvent,%20boolean))，让事件排队独立于 WebView 对 down 的处理；仍发送真实 touchscreen down/up，不使用 DOM click 替代这些触摸，不重试首次点击。保留输入序列和目标诊断，完整回归结果须另行记录，当前不能把单次关闭成功当作全套通过。
 
 该 Android 修正后完整回归已通过：教学入口、关闭、入席、加注均观察到真实可信 click；牌局、图鉴、课程和试炼恢复通过，宿主脚本强制停止后从 PID 7743 切换到 7840，恢复同一手牌与进度。日志为 `artifacts/android-handover-touch-async.log`，原始仪器结果保存在 `artifacts/android-handover-touch-passed/native-results/`。Gradle 的“Finished 7 tests”包含跳过和宿主分阶段统计，不把它说成七项原生功能通过。两次失败原样保留。此次软件 renderer 与先前长测的宿主 OpenGL 不同，没有重做或改写先前的 15 轮性能数据。
+
+### 8657893 云端结果与后续修正
+
+[39123410434](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39123410434) 已结束，**整体失败**：iOS、Android、macOS 成功，Web 与 Windows 失败。iOS 首次教学、图鉴、恢复和试炼通过，并已重新生成不含启动诊断的普通模拟器包。该次成功支持当前原生交接修正，但不证明所有启动环境或长期稳定性都已覆盖。
+
+Web 共 95 项通过、4 项跳过、1 项失败：小屏恢复后的同位置触摸投入了额外灵石。云端 trace 的两次 tap 调用相隔约 600 ms，超过原有 300 ms 保护；这不能说成 300 ms 内的手机触摸失败。已用“等待跟注按钮真正启用后再点原坐标”的本机用例稳定复现失败。继续按钮现移到状态行，原下注区域在暂停时保留锁定提示和高度，恢复后原坐标不会变成下注。相关四种浏览器配置共 8 项通过，完整回归待最终结果。原失败在 `artifacts/web-8657893-run/`、`artifacts/resume-layout-before.log`，修正截图为 `artifacts/resume-safe-position-paused-*.png` 与 `resume-safe-position-active-*.png`。
+
+Windows 普通安装版及兼容 HTTP 检查通过，长测只完成 12 轮 / 70 手牌，随后第 13 轮的 PowerShell Get-Process 内存计数查询超过 20 秒，整项失败；不能用旧 15 轮结果覆盖。前 12 轮每轮进程组均完整。证据在 `artifacts/windows-8657893-run/` 与 `artifacts/8657893-ci-failed-steps.log`。后续采集只对 ETIMEDOUT 做一次完整新快照，重新检查进程归属，不复用旧 PID 组；失败阶段、耗时与错误保留在最终报告，连续超时仍失败。任何归属进程缺少真实计数现在立即失败，不能接受缩小后的组。原生帧报告先逐轮落盘，避免随后的系统查询失败导致该轮帧数据丢失。32 项本机单元检查通过，其中重试用例是查询替身，**不是 Windows 运行证明**；新 Windows 实跑仍待执行。
+
+macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制保持不变。已通过 CUA 读取原生冻结 MEASURE 摘要并配对系统采集完成 10 轮；第 11 轮因 Mac 锁屏中断，未计入通过，`report.json` 保持 passed=false，并记录 interruption。每轮实际采到 8 个内核归属进程，除 App 与 WebKit 外还包括 Metal 编译、主题和音频助手。完整 MEASURE 可访问性摘要已保存；长 AUDIT 标签被 AX 截断，不能称为完整原始 AUDIT 导出。记录在 `artifacts/macos-extended-soak/{build,report,memory-baseline}.json` 和逐轮 footprint JSON，仍待解锁后继续验证。前 10 轮没有本机构建、浏览器回归或其他自动性能运行；有短时远程 CI 日志查询和每轮结束后的本地记录/系统采集，用户原有验收 App 仍运行。锁屏后恢复独立功能工作，第 11 轮不能据此用于性能结论。
+
+继续按钮布局修正后的最终本机浏览器回归 **100 项通过、4 项按平台跳过**，含 Chromium 手机 / 320×568 小屏 / 桌面与移动 WebKit。新增测试等到跟注控制真正启用后，再触摸继续按钮旧坐标，钱包与手牌不变、不会打开其他对话框，随后仍能正常跟注。320×568 暂停和恢复实际截图已查看，继续按钮触控高度至少 44。生产构建、服务端类型检查、正式离线 6 项和单元 32 项通过，日志为 `artifacts/resume-and-memory-{browser,build,server,offline,unit}.log`。最新原生客户端与 Windows 采集仍需对应新提交执行，不能用此前 8657893 的成功平台替代。
