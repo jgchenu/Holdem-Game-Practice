@@ -224,3 +224,9 @@ macOS 独立客户端由干净 5de5d11 构建，既有用户验收 App 二进制
 查询对异构 StaticText.value 直接执行 CONTAINS，遇到数值 1 会异常。现统一用 CAST(value, 'NSString') 后匹配，并读取 value/label/title 三种文本入口；DRAWSTATE、MEASURE 和完成状态共用同一查询。Foundation 六类实测（数字、空值、缺失、value 文本、label 文本、title 文本）通过，原生宏编译通过；宏内也直接用实际查询工厂执行这六类回归。远端 XCTest 查询及配对数据仍待新一轮验证。
 
 CI 额外上传轻量 `macos-diagnostic-reports`（JSON 与 run.log），完整 xcresult/画面证据仍保留原附件。轻量文件只改善取证速度，不更改普通像素门禁、渲染器或结果判定。
+
+### 146f577：文本查询通过，报告写入被拒绝
+
+[39150673700](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39150673700) 仍为 Mac 专项失败：普通原生卡牌像素门禁未通过。独立诊断本轮已通过六类查询回归，读取并解析 DRAWSTATE、保存前后截图与事实附件；随后写入项目内 probe.json 时系统返回 Code 513 / Operation not permitted。诊断测试失败，不能宣称已完成采集验收。日志还确认 teardown 确实终止独立 App。
+
+报告交换现改至每轮 UUID 对应的 `/private/tmp/wendao-macos-xctest-<UUID>` 私有目录（0700），Swift 严格匹配同一轮路径。宿主仍将 JSON、握手记录归档回原 artifacts 位置，再清理自己创建的临时目录；不会修改系统权限。像素门禁、轮次和内存采样边界不变。38 项单元测试、Node 语法及原生宏 build-only 编译通过（`artifacts/macos-temp-exchange-unit.log`、`artifacts/macos-temp-exchange-build.log`）；临时目录协议仍待云端实际运行。

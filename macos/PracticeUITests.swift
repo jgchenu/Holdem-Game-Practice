@@ -117,7 +117,10 @@ final class PracticeUITests: XCTestCase {
               Bundle(url: owned)?.bundleIdentifier == "com.wendao.poker.soak.desktop" else {
             XCTFail("Only the separate soak bundle may be launched"); return
         }
-        let output = root.appendingPathComponent("artifacts/macos-xctest-soak/\(runID)")
+        let output = URL(fileURLWithPath: "/private/tmp/wendao-macos-xctest-\(runID)")
+        guard config["exchangeDirectory"] as? String == output.path else {
+            XCTFail("Only this run's private temporary exchange directory may be used"); return
+        }
         func write(_ name: String, _ value: [String: Any]) throws {
             try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]).write(to: output.appendingPathComponent(name), options: .atomic)
         }
