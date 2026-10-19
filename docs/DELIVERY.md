@@ -25,22 +25,26 @@
 | Web | 13cf180 生产候选已归档 | 云端浏览器 108 项通过、4 项按平台跳过，离线 6 项、单元 37 项通过；历史 15 轮保留原版本范围 | 主屏幕安装、真机硬件与 GPU/触控专项未测；有限采样不证明无泄漏 |
 | iOS | 13cf180 普通模拟器与未签名设备包齐备 | 实际安装普通包首点教学 1 项通过；三台独立冷启动共 9 项功能通过、3 项跳过，每套 6 条本轮原生记录；四台设备关闭/删除均成功 | 历史音频/生命周期/15 轮按原版本保留；签名与手机硬件为额外未测范围 |
 | Android | 13cf180 API 36 / JDK 21 调试 APK，CI 与签名检查通过 | a36ad0b 本机 API34 复核普通包 1 项通过、3 项专项跳过；四次可信触控，强制重启两阶段各通过；17 个前端资源及 Android 工程输入与 main13 相同。历史 15 轮与真实 DeepSeek 保留原版本范围 | 当前 APK 未冒称真机验证；硬件、低内存系统回收、GPU 呈现与触控延迟专项未测 |
-| macOS | 13cf180 CI App/DMG、Rust 4 项及原生入口检查通过 | 普通首次教学/实际手牌状态 1 项通过；DMG 文件与 CI 原生测试副本相同。本机游戏可绘出桌面与卡牌。a36ad0b 独立帧缓冲采集 1 项通过 | 普通 CI 原生截图卡牌像素仍为 0；缓冲区非空不能代替窗口呈现。基础 DOM/2D 可见、两种简单 WebGL 均未出现在云端截图；d3d9455 的独立 ScreenCaptureKit 路径无现成授权，未捕获。完整新 15 轮待解锁/开发工具认证；旧 10 轮为中断结果。签名公证未做 |
+| macOS | 13cf180 CI App/DMG、Rust 4 项及原生入口检查通过 | 普通首次教学/实际手牌状态 1 项通过；DMG 与 CI 副本相同。b6ff8c9 本机独立客户端完成新 15 轮、983571 ms 采样、逐轮完整 6 进程内存、最终卡牌像素及真实进程重启后同手牌恢复；原生截图已实际查看 | 云端原生截图仍缺少 WebGL，像素门禁失败记录保留；本机通过不改写云端结果。P95 19 ms 是 JS 回调间隔，最长 51 ms、1 次超过 50 ms；不代表 GPU/手机 FPS。签名公证未做 |
 | Windows | 13cf180 普通 NSIS、安装版原生检查与连续运行通过 | 15 个窗口 / 981153 ms / 98 个完成态观测，全部 8 进程计数完整；P95 15.7 ms，最大 31.3 ms，超过 50 ms 间隔为 0，无系统查询重采 | Microsoft Basic Render Driver / D3D11 环境，不外推 GPU 呈现、手机 FPS 或无泄漏；用户电脑和真实 Windows DeepSeek 未测 |
 
 用户已确认有 iPhone、Android 手机、Windows 电脑和 Apple 开发者账号；这些条件尚不等于设备已连接或已验收。iOS 签名实测曾报 `No Accounts` 和缺少描述文件。按用户后续选择，本轮使用模拟器，签名与真机记录保留为额外未验证范围。
 
 ## 最近验证
 
+2026-10-19 用户继续后，本机已解锁且 XCTest 系统认证通过。干净提交 b6ff8c9 构建的独立长测 App 在 MacBook Pro / macOS 26.2 上完成新 15 轮（原生测试 1 pass / 0 fail / 0 skip），随后最终牌面像素、真实退出重启及同一手牌恢复均通过。有效采样 983571 ms、58878 个 JS 回调、99 个完成态观测（可能跨窗口重复）；各轮 P95 19 ms，最长 51 ms，超过 50 ms 共 1 次。每轮 6 个归属进程完整采样；footprint 合计 521908032 → 604762432 字节，RSS 合计 427491328 → 442384384 字节，不能据此认定无泄漏。报告为 `artifacts/macos-xctest-soak/cdcd928a-6ef6-4b31-bd61-765066558b19/report.json`，最终实际截图为 `artifacts/macos-local-soak-attachments/AE1813E8-C4A7-4E79-9003-D0D392765437.png`。
+
+同日独立渲染采集另 1 项通过：实际原生截图在缓冲区诊断前已有 8949 个卡牌浅色采样点，读取后仍为 8949，人工查看确认桌面与卡牌可见；记录为 `artifacts/macos-xctest-soak/8cb172c3-4a64-4709-975b-c8f82eb64b99/probe.json`。这补齐本机呈现与完整长测证据，不代表云端截图问题已修复，也不证明 GPU 呈现帧率。原用户审计 App PID40880 与二进制哈希前后相同。
+
 [13cf180 五平台 CI](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39142903013) 全部成功，已按用户授权合并到 main，提交 `8a951c02d8bed61b8eb757718c8bbd269beedd36`；合并 tree 与实测 13cf180 相同。云端 iOS 原始报告为 `artifacts/ios-13cf180-run/{ios-ordinary-entry,ios-cold-entry}.json`，Windows 原始报告与摘要为 `artifacts/windows-13cf180-run/`。
 
 `artifacts/packages/candidate-13cf180/` 有七份产物及 SHA256SUMS：Web、源码、Android APK、实际安装并通过首点测试的 iOS 模拟器 App、未签名 iOS 设备 App、Mac DMG、Windows NSIS。四类普通客户端的 17 个页面/资源相同；ZIP/APK 共 938 个文件做精确凭据值和普通包诊断标记字节扫描，未发现匹配，不能称为解码所有二进制嵌入数据。Mac DMG 只读挂载后 3 个 App 文件与 CI 原生实测副本相同，已卸载；APK 签名、iOS 平台和可执行权限验证通过。Windows EXE 未在本机展开，保留 CI 实际安装验证范围。`releaseReady=false`，代码合并不等于所有验收完成。
 
-Mac 专项的新像素门禁在 7ca5749 复现失败：`artifacts/macos-7ca5749-job.log` 与 `artifacts/macos-7ca5749-attachments/EB9ED454-09CD-46BE-96E9-D553596301B6.png` 确认手牌文字已存在，但原生截图继续读取约 20 秒仍无卡牌像素。显式 App 置前（f73cb5c）的 [Mac 专项](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39147349513) 同样失败。a36ad0b 已通过独立报告采集，取得 Apple GPU / WebGL、场景运行与非空手牌缓冲区，原生读取仍为 0；该次合成对照截图被验收面板覆盖，不能判断方案有效或无效。f012149 关闭检查通过，无遮挡原生截图中的三种合成对照仍没有牌面；f1e2368/d3d9455 的基础对照中 DOM/2D 可见、两种简单 WebGL 均不可见，但缓冲区读取正常。另一路 ScreenCaptureKit 无现成授权，未捕获。本机重新核对仍锁屏，需要手动解锁并完成开发工具认证后继续可靠呈现与完整15轮验收。Mac 专项不代表其他平台重新通过，详见 [原生验收记录](NATIVE_AUDIT.md)。
+Mac 专项的新像素门禁在 7ca5749 复现失败：`artifacts/macos-7ca5749-job.log` 与 `artifacts/macos-7ca5749-attachments/EB9ED454-09CD-46BE-96E9-D553596301B6.png` 确认手牌文字已存在，但原生截图继续读取约 20 秒仍无卡牌像素。显式 App 置前（f73cb5c）的 [Mac 专项](https://github.com/jgchenu/Holdem-Game-Practice/actions/runs/39147349513) 同样失败。a36ad0b 已通过独立报告采集，取得 Apple GPU / WebGL、场景运行与非空手牌缓冲区，原生读取仍为 0；该次合成对照截图被验收面板覆盖，不能判断方案有效或无效。f012149 关闭检查通过，无遮挡原生截图中的三种合成对照仍没有牌面；f1e2368/d3d9455 的基础对照中 DOM/2D 可见、两种简单 WebGL 均不可见，但缓冲区读取正常。另一路 ScreenCaptureKit 无现成授权，未捕获。当时本机仍锁屏；2026-10-19 解锁认证后的新本机呈现和完整15轮结果见本节顶部。Mac 专项不代表其他平台重新通过，详见 [原生验收记录](NATIVE_AUDIT.md)。
 
 Android 当前普通包功能复核原始证据位于 `artifacts/android-a36ad0b-validation/`：XML 为 1 pass / 3 skip / 0 fail，宿主强制停止后 PID5935 消失、新 PID6041 恢复同一手牌、灵石、课程、试炼与教学步骤。该轮开始前保留了旧结果，结束后关闭自己启动的 Pixel_7 模拟器。首入口等四次操作有真实可信触控；教学内容核对也使用 DOM 操作，不把整套用例称为全手势或性能验收。
 
-原本机 10 轮报告已保留在 `artifacts/macos-interrupted-5de5d11-ten-rounds/`，新版 CUA 尝试没有接受任何轮次。独立 XCTest 15 轮驱动已编译通过、单元 38 项通过；实际启动在系统认证阶段失败，尚未进入测试，`artifacts/macos-xctest-soak/2c47bc5f-e105-40cc-b345-c6a899950d25/report.json` 保持 passed=false。已请求用户解锁并完成开发工具认证；受保护审计 App 的 PID 和二进制哈希保持不变。
+原本机 10 轮报告已保留在 `artifacts/macos-interrupted-5de5d11-ten-rounds/`，新版 CUA 尝试没有接受任何轮次。独立 XCTest 15 轮驱动已编译通过、单元 38 项通过；实际启动在系统认证阶段失败，尚未进入测试，`artifacts/macos-xctest-soak/2c47bc5f-e105-40cc-b345-c6a899950d25/report.json` 保持 passed=false。该次失败及请求认证的记录作为历史保留；2026-10-19 新一轮已完成，未覆盖旧报告。受保护审计 App 的 PID 和二进制哈希保持不变。
 
 ## 历次补充（保留当时的失败与待办）
 
@@ -188,7 +192,7 @@ Windows 测试采用安装后启动 App、测试进程显式启用本机端口�
 - DeepSeek 本机网关、Web、iOS / Android / macOS 原生验收配置已真实联通。Windows 实际回环 HTTP 的预检、成功、错误、超时与回退已测，上游为明确标识的兼容替身，仍未在 Windows 调用真实 DeepSeek。模型按 `deepseek-flash` 配置，详见 `docs/AI.md`。真实调用样本不代表持续质量或延迟保证。
 - 公网师父服务：账号鉴权、配额、持久限流、HTTPS、发布环境和相应隐私披露。当前服务是本机开发网关。
 - 额外范围：手机真机、用户电脑与签名发布未验收。用户已明确本轮使用手机模拟器，不再等待真机；未要求实际提交商店或正式发布。
-- 各平台已有音频和一分钟以上连续牌局的实际证据；Web / iOS / Android / Windows 已有带归属进程组的 15 轮记录，不能替代当前源码功能复验。macOS 长测在 10 轮后被锁屏中断，GPU 呈现与触控延迟专项仍未完成。60 FPS 是目标，回调间隔不能作为手机硬件保证。`web-perf` 技能要求的 Chrome DevTools MCP 未配置，专项性能审计未执行。
+- 各平台已有音频和一分钟以上连续牌局的实际证据；五个平台均已有带归属进程组的 15 轮记录，分别保留实际源码和环境范围，不能互相替代当前源码功能复验。macOS b6ff8c9 的新 15 轮与重启恢复已通过；旧锁屏中断 10 轮仍保持未通过。云端 Mac WebGL 截图门禁仍失败；GPU 呈现帧率与触控延迟专项未完成。60 FPS 是目标，回调间隔不能作为手机硬件保证。`web-perf` 技能要求的 Chrome DevTools MCP 未配置，专项性能审计未执行。
 
 真机步骤：记录型号和系统 → 安装、冷启动 → 玩三手（弃牌、加注、摊牌和复盘）→ 切后台再返回 → 结束进程再启动 → 核对手牌、灵石和课程进度 → 检查键盘、安全区和触控 → 音效、静音、来电恢复 → 持续帧时间和内存测量。每一项只在实际完成后填写结果。
 

@@ -2,6 +2,27 @@
 
 用户本轮接受 iOS / Android 模拟器。以下采样不能证明真机性能、GPU 实际呈现帧率或扬声器可听效果；60 FPS 仍是目标。
 
+## 2026-10-19：本机 Mac 完整新 15 轮与画面恢复通过
+
+用户继续后，本机已解锁，XCTest 系统认证正常。仅退出、重建自己的 `com.wendao.poker.soak.desktop`，未操作原用户审计 App。干净提交 `b6ff8c97dbe9e93ec18f9aa1b66d0b8ce426e765` 的隔离构建与两次原生测试均完成；不是复用旧 ba83680 二进制或拼接之前中断的 10 轮。
+
+| 实测项目 | 结果与边界 |
+| --- | --- |
+| 本机原生呈现采集 | `8cb172c3-4a64-4709-975b-c8f82eb64b99`，1 pass / 0 fail / 0 skip；缓冲区诊断前的原生卡牌像素 8949，诊断后 8949；实际截图已查看，桌面与手牌可见 |
+| 连续原生运行 | `cdcd928a-6ef6-4b31-bd61-765066558b19`，1 pass / 0 fail / 0 skip；15/15 轮，983571 ms 有效牌局采样，58878 个 JS 回调，99 个完成态观测（可能跨窗口重复） |
+| 环境与画质 | MacBook Pro / macOS 26.2 / arm64，Apple GPU；fine、reducedMotion=false；本机无并行构建、浏览器测试、模拟器或归档解压，XCTest 持续读取原生可操作状态有观测开销 |
+| 回调节奏 | 每轮 P95 19 ms；最长 51 ms，超过 50 ms 共 1 次；不是 GPU 呈现帧率或手机性能保证 |
+| 音频与内存 | 每轮真实音频 starts 增加、结束状态 suspended；每轮实际采到 6 个归属进程，包含 WebContent、GPU、Networking、主题与音频助手，无缺失；不是扬声器可听效果验收 |
+| 内存变化 | footprint 合计 521908032 → 604762432 字节；RSS 合计 427491328 → 442384384 字节。顺序系统采样、不等于独占 RAM，不据此宣称无增长或无泄漏 |
+| 最终恢复 | 15 轮后原生卡牌像素 >100；真实终止并重新启动后同一手牌标签一致、卡牌像素 >100；最终截图已实际查看 |
+| 受保护 App | PID40880 前后相同，SHA256 始终为 `26304ec25795125aa624523c9b51d9b925a0b7a349f4a58ec74a03974a561cda` |
+
+原始记录：`artifacts/macos-xctest-soak/<上述 UUID>/{report.json,run.log,native.xcresult}`；渲染事实 `8cb172c3-4a64-4709-975b-c8f82eb64b99/probe.json`。实际查看的原生图为 `artifacts/macos-local-render-attachments/443BD13D-D7BF-4541-B2B5-6A868B19C27B.png` 与 `artifacts/macos-local-soak-attachments/AE1813E8-C4A7-4E79-9003-D0D392765437.png`；摘要 `artifacts/macos-local-complete-summary.json`。长测协议由原生 XCTest 点击、独立宿主确认冻结边界后采集系统内存，并在确认后才允许下一轮开始。
+
+本机成功不能改写云端 Apple VM 的失败记录：普通卡牌像素门禁仍失败，两种基础 WebGL 也缺失；尚未证明云端捕获或虚拟显示链的具体根因。两边 ScreenCaptureKit 均无现成授权，未请求或修改权限。本次没有改变普通 Phaser 渲染器或削弱像素门禁，未把读取图当作屏幕图。普通前端 17 个文件与 main13 相同的既有检查保留于 `artifacts/macos-basic-surface-ordinary-parity.json`。
+
+复现：先关闭自己的独立长测 App，执行 `node scripts/prepare-macos-soak.mjs`，再运行 `node scripts/macos-runtime-soak.mjs --render-probe` 或 `node scripts/macos-runtime-soak.mjs`；后者仅在完整 15 轮、逐轮内存、最终像素和重启恢复全部通过时返回成功。测试期间须保持 Mac 解锁和独立 App 前台；不修改系统安全设置。
+
 ## 可重复执行
 
 先准备项目专用模拟器，再运行：
